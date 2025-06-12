@@ -1,6 +1,25 @@
-[![Bolt.new: AI-Powered Full-Stack Web Development in the Browser](./public/social_preview_index.jpg)](https://bolt.new)
 
-# Bolt.new: AI-Powered Full-Stack Web Development in the Browser
+# Run instructions: Run Empropmtu Builder - this directory:
+### TO build:
+npm install
+### To run UI:
+npm run dev --host
+
+# Run instructions: Run Empropmtu Builder API: ./clockwork_viking/ Directory :
+### To set up Environment:
+source source_me_first.sh
+### Then, to run API:
+./run_api_latest.sh
+
+
+
+
+
+
+
+
+
+# Older stuff pre-fork:  Bolt.new: AI-Powered Full-Stack Web Development in the Browser
 
 Bolt.new is an AI-powered web development agent that allows you to prompt, run, edit, and deploy full-stack applications directly from your browser—no local setup required. If you're here to build your own AI-powered web dev agent using the Bolt open source codebase, [click here to get started!](./CONTRIBUTING.md)
 

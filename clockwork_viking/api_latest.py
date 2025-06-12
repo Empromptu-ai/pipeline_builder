@@ -77,7 +77,7 @@ skyvern_api_key = os.getenv("SKYVERN_API_KEY")
 skyvern_client = Skyvern(api_key=skyvern_api_key)
 
 # set up webhook stuff for the internet-research functions
-webhook_base_url = os.getenv("WEBHOOK_BASE_URL", "https://staging.impromptu-labs.com")
+webhook_base_url = os.getenv("API_URL", "https://staging.impromptu-labs.com")
 # In-memory storage for research tasks/Skyvern (we could use a database in production)
 pending_tasks: Dict[str, Dict] = {}
 completed_tasks: Dict[str, Dict] = {}

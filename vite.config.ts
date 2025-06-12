@@ -12,7 +12,7 @@ export default defineConfig((config) => {
     },
     server: {
       port: 8080, // change here
-      allowedHosts: ['staging.impromptu-labs.com','localhost']
+      allowedHosts: ['staging.impromptu-labs.com','localhost','builder.impromptu-labs.com']
     },
     plugins: [
       nodePolyfills({
