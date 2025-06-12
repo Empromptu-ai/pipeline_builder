@@ -1,0 +1,13 @@
+uvicorn
+fastapi
+motor
+openai
+pandas
+PyPDF2
+python-docx
+requests
+selenium
+beautifulsoup4
+skyvern
+langchain-openai
+langchain
