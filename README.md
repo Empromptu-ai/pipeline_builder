@@ -11,8 +11,6 @@ source source_me_first.sh
 ### To set up DB:
 setup_mongodb.sh
 ### To set up nginx, reverse proxy and https endpoint (put your endpoint URL in here):
-# ./setup_https_fastapi.sh builder.impromptu-labs.com 5000 (old)
-# Correct:
 sudo ./setup_https_combined.sh builder.impromptu-labs.com 8080 5000
 ### Then, to run API:
 ./run_api_latest.sh
