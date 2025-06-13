@@ -499,34 +499,36 @@ builder.register_api_endpoint_as_tool(
     tool_name="object_by_name"
 )
 
+# NOTE: Presently chatbots cannot operate browsers.  This is due to difficulties with
+# timing and callbacks.
 
-builder.register_api_endpoint_as_tool(
-    endpoint_path="/research_topic",
-    method="POST",
-    description="""Begin Researching a topic using an online browser to find information through web search. Starts a new research task and returns immediately with a task ID for tracking. The actual answer is gotten later by using the /research_status/{task_id} endpoint.
-    Required parameters:
-    - goal (string): A desired goal to achieve, describing what information you want to find. Example: "the linkedin URL and phone number for John Doe, the CEO of ABC"
-    - return_data (list of strings): List of specific data elements that should be returned from the research.
-    Returned Values:
-    - task_id (string): The API will immediately return a task_id. Keep this - you'll need it to get your results.
-    - status (string): Status of the research operation.
+# builder.register_api_endpoint_as_tool(
+#     endpoint_path="/research_topic",
+#     method="POST",
+#     description="""Begin Researching a topic using an online browser to find information through web search. Starts a new research task and returns immediately with a task ID for tracking. The actual answer is gotten later by using the /research_status/{task_id} endpoint.
+#     Required parameters:
+#     - goal (string): A desired goal to achieve, describing what information you want to find. Example: "the linkedin URL and phone number for John Doe, the CEO of ABC"
+#     - return_data (list of strings): List of specific data elements that should be returned from the research.
+#     Returned Values:
+#     - task_id (string): The API will immediately return a task_id. Keep this - you'll need it to get your results.
+#     - status (string): Status of the research operation.
     
-    The function will perform web searches and extract the requested information without requiring logins.""",
-    request_model=ResearchTopicRequest,
-    tool_name="research_topic"
-)
+#     The function will perform web searches and extract the requested information without requiring logins.""",
+#     request_model=ResearchTopicRequest,
+#     tool_name="research_topic"
+# )
 
 
-builder.register_api_endpoint_as_tool(
-    endpoint_path="/research_status/{task_id}",
-    method="GET",
-    description="""Check if your research task is complete and get results.
-    Use the task ID to check periodically until the status changes from "pending" to "completed", "failed", or "timeout".
-    Recommended polling pattern:
-    Check every 15-30 seconds
-    When status is "completed", the output_data field will contain your research results, with the keys as in return_data from research_topic. Expect to wait for these results.""",
-    tool_name="research_status"
-)
+# builder.register_api_endpoint_as_tool(
+#     endpoint_path="/research_status/{task_id}",
+#     method="GET",
+#     description="""Check if your research task is complete and get results.
+#     Use the task ID to check periodically until the status changes from "pending" to "completed", "failed", or "timeout".
+#     Recommended polling pattern:
+#     Check every 15-30 seconds
+#     When status is "completed", the output_data field will contain your research results, with the keys as in return_data from research_topic. Expect to wait for these results.""",
+#     tool_name="research_status"
+# )
 
 
 # Add more of your existing endpoints here
@@ -853,7 +855,7 @@ async def research_topic(request: ResearchTopicRequest):
                 f"Return an object with the following keys: {', '.join(request.return_data)}. Do not nest additional keys or categories under these keys, each of these keys should contain a single string."
             )
         else:
-            prompt_text = (
+            prompt_text = ( 
                 f"Starting from a google search, find {request.goal}. "
                 f"Attempt to find this information without needing to log into any sites. "
                 f"Return an object with the following key: {', '.join(request.return_data)}. Do not nest additional keys or categories under this key, it should just contain a single string."
