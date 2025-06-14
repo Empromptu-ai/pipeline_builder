@@ -1396,7 +1396,7 @@ async def apply_prompt(request: ApplyPromptRequest):
             
             for input_name, data_entry in combo.items():
                 placeholder = "{" + input_name + "}"
-                filled_prompt = filled_prompt.replace(placeholder, data_entry.value)
+                filled_prompt = filled_prompt.replace(placeholder, str(data_entry.value))
                 all_keys.extend(data_entry.key_list)
             
             # Call OpenAI API
