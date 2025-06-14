@@ -589,11 +589,10 @@ Please also echo the exact API calls to the screen for debugging as they happen.
 `;
 // Remember to re-install and run npm run dev (using <boltAction type="shell"> ) after any changes.
 // Remember, do not build or run the software yet.
-
+// Please make sure that any research calls are properly constructed, with a call to research_topic and then a polling pattern using /research_status/{task_id} periodically until an answer is returned.
 export const INJECTED_PROMPT_2 = stripIndents`[INJECTED_PROMPT_2] 
 
-Please make sure that any research calls are properly constructed, with a call to research_topic and then a polling pattern using /research_status/{task_id} periodically until an answer is returned.
-remember that each returned 'value' array from return_data is already in json/dict format and does not need to be parsed. Trying to use JSON.Parse() on these will break the program.
+Give the code one more quick check.  Remember that each returned 'value' array from return_data is already in json/dict format and does not need to be parsed. Trying to use JSON.Parse() on these will break the program.
 If you have not done so yet, please return the following block in order to install and run the code:
 
 <boltArtifact>
