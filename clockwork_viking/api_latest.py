@@ -1230,7 +1230,7 @@ async def add_data_entry(object_name: str, key_list: List[str], value: str):
     print(f"adding data entry: {object_name}, {key_list}, {value}")
     await collection.update_one(
         {"object_name": object_name},
-        {"$push": {"data": {"key_list": key_list, "value": str(value)}}}
+        {"$push": {"data": {"key_list": key_list, "value": value}}}
     )
 
 def combine_events(data_entries: List[DataEntry]) -> DataEntry:
