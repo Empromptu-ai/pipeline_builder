@@ -283,20 +283,8 @@ Only do this once when you know everything you need to, and include a plan using
 }
 
 ### 3. Data Management
-- 'GET /return_data/{object_name}': Retrieve a specific data object and everything that helped create it. returns a key called "data" that has all other objects under it.  for example, a returned value could be:
-{
-'data': [
-    {
-      'key_list': [...],
-      'value': ['https://url1.com/','https://url2.com/']
-    },
-    {
-      'key_list': [...],
-      'value': ['https://abc.com/','https://defg.com/']
-    }
-  ] 
-}
-Note that each returned 'value' array is already in json/dict format and does not need to be parsed. Expect "data" and each "value" element to be a list, appropriate to the task.
+- 'GET /return_data/{object_name}': Retrieve a specific data object for display or use. 
+Returns a key called "text_value" that has concatenated values for this object.
 
 - 'DELETE /objects/{object_name}': Delete a data object
 
@@ -492,6 +480,26 @@ As an AI assistant using this system:
 Remember: When you are confident you can write a working code snippet to accomplish the user's needs, return the token "[final]: " followed by the code and a brief description of what the code will accomplish, formatted as a request to compile this code.
 `
 
+
+
+
+// ### 3. Data Management
+// - 'GET /return_data/{object_name}': Retrieve a specific data object and everything that helped create it. returns a key called "data" that has all other objects under it.  for example, a returned value could be:
+// {
+// 'data': [
+//     {
+//       'key_list': [...],
+//       'value': ['https://url1.com/','https://url2.com/']
+//     },
+//     {
+//       'key_list': [...],
+//       'value': ['https://abc.com/','https://defg.com/']
+//     }
+//   ] 
+// }
+// Note that each returned 'value' array is already in json/dict format and does not need to be parsed. Expect "data" and each "value" element to be a list, appropriate to the task. So get that value from something like result.data[0].value, casting it as a string.
+
+
 export const INJECTED_PROMPT_1 = stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:
 
 (For screens where users upload documents, extract structured data, and view outputs):
@@ -548,22 +556,8 @@ And remember the actual API functions you have access to, and what they expect:
 - 'match_keys': Only combine data entries that share common tracking keys
 
 ### 3. Data Management
-- 'GET /return_data/{object_name}': Retrieve a specific data object and everything that helped create it. returns a key called "data" that has all other objects under it.  for example, a returned value could be:
-{
-'data': [
-    {
-      'key_list': [...],
-      'value': ['https://url1.com/','https://url2.com/'] // (note:  array, NOT A STRING)
-    },
-    {
-      'key_list': [...],
-      'value': ['https://abc.com/','https://defg.com/']  // (note:  array, NOT A STRING)
-    }
-  ] 
-}
-Note that each returned 'value' array is already in json/dict format and does not need to be parsed. Expect "data" and each "value" element to be a list, appropriate to the task
-
-REMEMBER: each returned 'value' array from return_data is already in json/dict format and does not need to be parsed. Trying to use JSON.Parse() on these will break the program.
+- 'GET /return_data/{object_name}': Retrieve a specific data object for display or use. 
+Returns a key called "text_value" that has concatenated values for this object.
 
 - 'DELETE /objects/{object_name}': Delete a data object by name
 
