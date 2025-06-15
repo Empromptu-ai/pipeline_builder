@@ -1217,14 +1217,17 @@ async def get_or_create_object(object_name: str) -> Dict[str, Any]:
     """Get existing object or create new one"""
     existing = await collection.find_one({"object_name": object_name})
     if existing:
+        print(f"Existing object: {existing}")
         return existing
     else:
         new_obj = {"object_name": object_name, "data": []}
         await collection.insert_one(new_obj)
+        print(f"creating object: {new_obj}")
         return new_obj
 
 async def add_data_entry(object_name: str, key_list: List[str], value: str):
     """Add a data entry to an object"""
+    print(f"adding data entry: {object_name}, {key_list}, {value}")
     await collection.update_one(
         {"object_name": object_name},
         {"$push": {"data": {"key_list": key_list, "value": value}}}
