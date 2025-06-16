@@ -1476,7 +1476,7 @@ async def return_data(object_name: str):
             if data_value != []:
                 # text_value = '\n'.join([str(data_value[0].get['value'])])
                 # concatenate all the text values.
-                text_value = '\n'.join([str(i.get['value']) for i in data_value])
+                text_value = '\n'.join([str(i.get('value')) for i in data_value])
             return {
                 "object_name": primary_obj.get("object_name",object_name),
                 "text_value": text_value,
@@ -1525,7 +1525,7 @@ async def return_data(object_name: str):
         if data_value != []:
             # text_value = '\n'.join([str(data_value[0].get['value'])])
             # concatenate all the text values.
-            text_value = '\n'.join([str(i.get['value']) for i in data_value])
+            text_value = '\n'.join([str(i.get('value')) for i in data_value])
         
         returned_object = {
             # "data": primary_obj,
