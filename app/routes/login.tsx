@@ -33,7 +33,7 @@ export async function action({ request }: ActionFunctionArgs) {
         return json({ error: 'Email is required for registration' }, { status: 400 });
       }
 
-      const registerResponse = await fetch('http://analytics.empromptu.ai:8080/api/register_user', {
+      const registerResponse = await fetch('http://analytics.empromptu.ai:5000/api/register_user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, email }),
@@ -46,7 +46,7 @@ export async function action({ request }: ActionFunctionArgs) {
       }
 
       // After successful registration, automatically log in
-      const loginResponse = await fetch('http://analytics.empromptu.ai:8080/api/verify_user', {
+      const loginResponse = await fetch('http://analytics.empromptu.ai:5000/api/verify_user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -61,7 +61,7 @@ export async function action({ request }: ActionFunctionArgs) {
       return createUserSession(username, uid, apiKey);
       
     } else if (action === 'login') {
-      const loginResponse = await fetch('http://analytics.empromptu.ai:8080/api/verify_user', {
+      const loginResponse = await fetch('http://analytics.empromptu.ai:5000/api/verify_user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
