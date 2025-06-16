@@ -1,28 +1,17 @@
 // app/utils/session.server.ts
 import { redirect } from '@remix-run/node';
 
-// Try to import the appropriate session storage based on environment
-let createCookieSessionStorage: any;
+// Simple in-memory storage for development
+// NOTE: This will not persist across server restarts
+const sessions = new Map<string, {
+  username: string;
+  uid: string;
+  apiKey: string;
+}>();
 
-try {
-  // For Cloudflare deployment
-  createCookieSessionStorage = require('@remix-run/cloudflare').createCookieSessionStorage;
-} catch {
-  // For Node.js development
-  createCookieSessionStorage = require('@remix-run/node').createCookieSessionStorage;
+function generateSessionId() {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
-
-export const sessionStorage = createCookieSessionStorage({
-  cookie: {
-    name: '__session',
-    secrets: ['your-secret-key-here'], // Change this to a secure secret
-    sameSite: 'lax',
-    path: '/',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-  },
-});
 
 export async function createUserSession(
   username: string,
@@ -30,26 +19,35 @@ export async function createUserSession(
   apiKey: string,
   redirectTo: string = '/'
 ) {
-  const session = await sessionStorage.getSession();
-  session.set('username', username);
-  session.set('uid', uid);
-  session.set('apiKey', apiKey);
+  const sessionId = generateSessionId();
+  sessions.set(sessionId, { username, uid, apiKey });
   
   return redirect(redirectTo, {
     headers: {
-      'Set-Cookie': await sessionStorage.commitSession(session),
+      'Set-Cookie': `session=${sessionId}; HttpOnly; Path=/; Max-Age=${60 * 60 * 24 * 30}`,
     },
   });
 }
 
 export async function getUserSession(request: Request) {
-  const session = await sessionStorage.getSession(request.headers.get('Cookie'));
+  const cookieHeader = request.headers.get('Cookie');
+  if (!cookieHeader) {
+    return { username: null, uid: null, apiKey: null };
+  }
+
+  const sessionMatch = cookieHeader.match(/session=([^;]+)/);
+  if (!sessionMatch) {
+    return { username: null, uid: null, apiKey: null };
+  }
+
+  const sessionId = sessionMatch[1];
+  const session = sessions.get(sessionId);
   
-  return {
-    username: session.get('username'),
-    uid: session.get('uid'),
-    apiKey: session.get('apiKey'),
-  };
+  if (!session) {
+    return { username: null, uid: null, apiKey: null };
+  }
+
+  return session;
 }
 
 export async function requireUserSession(request: Request) {
@@ -63,11 +61,18 @@ export async function requireUserSession(request: Request) {
 }
 
 export async function logout(request: Request) {
-  const session = await sessionStorage.getSession(request.headers.get('Cookie'));
+  const cookieHeader = request.headers.get('Cookie');
+  if (cookieHeader) {
+    const sessionMatch = cookieHeader.match(/session=([^;]+)/);
+    if (sessionMatch) {
+      const sessionId = sessionMatch[1];
+      sessions.delete(sessionId);
+    }
+  }
   
   return redirect('/login', {
     headers: {
-      'Set-Cookie': await sessionStorage.destroySession(session),
+      'Set-Cookie': 'session=; HttpOnly; Path=/; Max-Age=0',
     },
   });
 }
