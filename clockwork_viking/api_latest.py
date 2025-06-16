@@ -1339,6 +1339,9 @@ async def apply_prompt(request: ApplyPromptRequest):
         processed_inputs = {}
         for input_spec in request.inputs:
             obj_data = input_objects[input_spec.input_object_name]
+            # Ensure this fits the formula - one string as value for each input.
+            for i in range(len(obj_data["data"])):
+                obj_data["data"][i]["value"] = str(obj_data["data"][i]["value"])
             data_entries = [DataEntry(**entry) for entry in obj_data["data"]]
             
             if input_spec.mode == "combine_events":
