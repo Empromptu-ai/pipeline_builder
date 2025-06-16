@@ -5,6 +5,22 @@ import { classNames } from '~/utils/classNames';
 import { HeaderActionButtons } from './HeaderActionButtons.client';
 import { ChatDescription } from '~/lib/persistence/ChatDescription.client';
 
+
+import { Form } from '@remix-run/react';
+
+export function LogoutButton() {
+  return (
+    <Form method="post" action="/logout" className="inline">
+      <button
+        type="submit"
+        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50"
+      >
+        Logout
+      </button>
+    </Form>
+  );
+}
+
 export function Header() {
   const chat = useStore(chatStore);
 
@@ -25,6 +41,7 @@ export function Header() {
           Empromptu
         </a>
       </div>
+      <LogoutButton />
       <span className="flex-1 px-4 truncate text-center text-bolt-elements-textPrimary">
         <ClientOnly>{() => <ChatDescription />}</ClientOnly>
       </span>
