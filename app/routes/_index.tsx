@@ -19,7 +19,8 @@
 //   );
 // }
 
-import { json, type MetaFunction, type LoaderFunctionArgs } from '@remix-run/cloudflare';
+// app/routes/_index.tsx
+import { json, type MetaFunction, type LoaderFunctionArgs } from '@remix-run/node';
 import { ClientOnly } from 'remix-utils/client-only';
 import { useLoaderData } from '@remix-run/react';
 import { BaseChat } from '~/components/chat/BaseChat';

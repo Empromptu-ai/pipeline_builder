@@ -1,5 +1,16 @@
 // app/utils/session.server.ts
-import { createCookieSessionStorage, redirect } from '@remix-run/cloudflare';
+import { redirect } from '@remix-run/node';
+
+// Try to import the appropriate session storage based on environment
+let createCookieSessionStorage: any;
+
+try {
+  // For Cloudflare deployment
+  createCookieSessionStorage = require('@remix-run/cloudflare').createCookieSessionStorage;
+} catch {
+  // For Node.js development
+  createCookieSessionStorage = require('@remix-run/node').createCookieSessionStorage;
+}
 
 export const sessionStorage = createCookieSessionStorage({
   cookie: {
