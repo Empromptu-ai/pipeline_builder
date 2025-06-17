@@ -52,7 +52,8 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     
     // Read all files
     for (const file of fileList) {
-      if (!file.path) continue; // Skip if path is undefined
+      // if (!file.path) continue; // Skip if path is undefined
+      console.log(`Found File: ${file} `);
       try {
         const content = await container.fs.readFile(file.path, 'utf8');
         fileContents.set(file.path, content);
