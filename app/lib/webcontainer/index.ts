@@ -37,7 +37,8 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     
     // Get all files recursively from the work directory
     // const files = await container.fs.readdir(`/${WORK_DIR_NAME}`, { recursive: true, withFileTypes: true });
-    const files = await container.fs.readdir('/', { recursive: true, withFileTypes: true });
+    // const files = await container.fs.readdir('/', { recursive: true, withFileTypes: true });
+    const files = await container.fs.readdir('/home/project', { recursive: true, withFileTypes: true });
     // Filter out directories, keep only files
     const fileList = files.filter(file => file.isFile());
     console.log(`Found ${fileList.length} files to extract`);
