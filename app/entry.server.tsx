@@ -70,6 +70,16 @@ export default async function handleRequest(
 
   responseHeaders.set('Cross-Origin-Embedder-Policy', 'require-corp');
   responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
+
+  let csp = "default-src 'self'; ";
+  csp += "frame-src 'self' https://analytics.impromptu-labs.com https://example.com https:; ";
+  csp += "script-src 'self' 'unsafe-inline' 'unsafe-eval'; ";
+  csp += "style-src 'self' 'unsafe-inline'; ";
+  csp += "img-src 'self' data: https:; ";
+  csp += "connect-src 'self' https:; ";
+  csp += "font-src 'self' data:;";
+
+  responseHeaders.set('Content-Security-Policy', csp);
   // responseHeaders.set('Cross-Origin-Embedder-Policy', 'unsafe-none');
   // responseHeaders.set('Cross-Origin-Opener-Policy', 'unsafe-none');
 
