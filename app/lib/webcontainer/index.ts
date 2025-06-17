@@ -57,13 +57,15 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     for (const file of fileList) {
       // if (!file.path) continue; // Skip if path is undefined
       console.log(`Found File: ${file} `);
+      console.log(`Found File Name: ${file.name} `);
+      const file_path = path.join(process.cwd(), file.name);
+      console.log(`Found File Path: ${file_path} `);
+      if (!file_path) continue; // Skip if path is undefined
       try {
-        console.log(`Found File Name: ${file.name} `);
-        const file_path = path.join(process.cwd(), file.name);
         const content = await container.fs.readFile(file_path, 'utf8');
         // console.log(`Found File Name: ${file.name} `);
         fileContents.set(file_path, content);
-        console.log(`Read file: ${file_path}`);
+        console.log(`Read file Path: ${file_path}`);
       } catch (error) {
         // Try reading as binary if UTF8 fails
         try {
