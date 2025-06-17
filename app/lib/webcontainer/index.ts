@@ -2,6 +2,7 @@
 import { WebContainer } from '@webcontainer/api';
 import { WORK_DIR_NAME } from '~/utils/constants';
 import path from 'node:path';
+import JSZip from 'jszip';
 
 interface WebContainerContext {
   loaded: boolean;
@@ -37,16 +38,9 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     console.log('Starting file extraction...');
     
     // Get all files recursively from the work directory
-    // const files = await container.fs.readdir(`/${WORK_DIR_NAME}`, { recursive: true, withFileTypes: true });
-    // const files = await container.fs.readdir('/', { recursive: true, withFileTypes: true });
-    // const files = await container.fs.readdir('/home/project', { recursive: true, withFileTypes: true });
-    // const files = await container.fs.readdir('.', { recursive: true, withFileTypes: true });
     const files = await container.fs.readdir(process.cwd(), { recursive: true, withFileTypes: true });
-    // Filter out directories, keep only files
-    // const fileList = files.filter(file => file.isFile());
     console.log(`Found files: ${files} `);
-    // Filter out directories, keep only files, and exclude undefined paths
-    // const fileList = files.filter(file => file.isFile() && file.path);
+    // Filter out directories, keep only files
     const fileList = files.filter(file => file.isFile());
     console.log(`Found ${fileList.length} files to extract`);
     
@@ -55,15 +49,14 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     
     // Read all files
     for (const file of fileList) {
-      // if (!file.path) continue; // Skip if path is undefined
       console.log(`Found File: ${file} `);
       console.log(`Found File Name: ${file.name} `);
       const file_path = path.join(process.cwd(), file.name);
       console.log(`Found File Path: ${file_path} `);
       if (!file_path) continue; // Skip if path is undefined
+
       try {
         const content = await container.fs.readFile(file_path, 'utf8');
-        // console.log(`Found File Name: ${file.name} `);
         fileContents.set(file_path, content);
         console.log(`Read file Path: ${file_path}`);
       } catch (error) {
@@ -80,8 +73,8 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     }
     
     // Use JSZip if available, otherwise download individual files
-    if (typeof window !== 'undefined' && (window as any).JSZip) {
-      const JSZip = (window as any).JSZip;
+    if (typeof window !== 'undefined') {      // } && (window as any).JSZip) {
+      // const JSZip = (window as any).JSZip;
       const zip = new JSZip();
       
       fileContents.forEach((content, path) => {
