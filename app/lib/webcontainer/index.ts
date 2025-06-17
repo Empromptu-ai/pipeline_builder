@@ -43,6 +43,7 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     const files = await container.fs.readdir(process.cwd(), { recursive: true, withFileTypes: true });
     // Filter out directories, keep only files
     // const fileList = files.filter(file => file.isFile());
+    console.log(`Found files: ${files} `);
     // Filter out directories, keep only files, and exclude undefined paths
     const fileList = files.filter(file => file.isFile() && file.path);
     console.log(`Found ${fileList.length} files to extract`);
