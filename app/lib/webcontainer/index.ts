@@ -1,6 +1,7 @@
 
 import { WebContainer } from '@webcontainer/api';
 import { WORK_DIR_NAME } from '~/utils/constants';
+import path from 'node:path';
 
 interface WebContainerContext {
   loaded: boolean;
@@ -57,19 +58,21 @@ export async function extractAndDownloadFiles(container: WebContainer) {
       // if (!file.path) continue; // Skip if path is undefined
       console.log(`Found File: ${file} `);
       try {
-        const content = await container.fs.readFile(file.path, 'utf8');
         console.log(`Found File Name: ${file.name} `);
-        fileContents.set(file.path, content);
-        console.log(`Read file: ${file.path}`);
+        const file_path = path.join(process.cwd(), file.name);
+        const content = await container.fs.readFile(file_path, 'utf8');
+        // console.log(`Found File Name: ${file.name} `);
+        fileContents.set(file_path, content);
+        console.log(`Read file: ${file_path}`);
       } catch (error) {
         // Try reading as binary if UTF8 fails
         try {
-          const content = await container.fs.readFile(file.path);
-          fileContents.set(file.path, content);
+          const content = await container.fs.readFile(file_path);
+          fileContents.set(file_path, content);
 
-          console.log(`Read binary file: ${file.path}`);
+          console.log(`Read binary file: ${file_path}`);
         } catch (binaryError) {
-          console.warn(`Failed to read file: ${file.path}`, binaryError);
+          console.warn(`Failed to read file: ${file_path}`, binaryError);
         }
       }
     }
