@@ -42,7 +42,9 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     // const files = await container.fs.readdir('.', { recursive: true, withFileTypes: true });
     const files = await container.fs.readdir(process.cwd(), { recursive: true, withFileTypes: true });
     // Filter out directories, keep only files
-    const fileList = files.filter(file => file.isFile());
+    // const fileList = files.filter(file => file.isFile());
+    // Filter out directories, keep only files, and exclude undefined paths
+    const fileList = files.filter(file => file.isFile() && file.path);
     console.log(`Found ${fileList.length} files to extract`);
     
     // Create a map to store file contents
@@ -50,6 +52,7 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     
     // Read all files
     for (const file of fileList) {
+      if (!file.path) continue; // Skip if path is undefined
       try {
         const content = await container.fs.readFile(file.path, 'utf8');
         fileContents.set(file.path, content);
@@ -59,6 +62,7 @@ export async function extractAndDownloadFiles(container: WebContainer) {
         try {
           const content = await container.fs.readFile(file.path);
           fileContents.set(file.path, content);
+
           console.log(`Read binary file: ${file.path}`);
         } catch (binaryError) {
           console.warn(`Failed to read file: ${file.path}`, binaryError);
