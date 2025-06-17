@@ -45,7 +45,8 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     // const fileList = files.filter(file => file.isFile());
     console.log(`Found files: ${files} `);
     // Filter out directories, keep only files, and exclude undefined paths
-    const fileList = files.filter(file => file.isFile() && file.path);
+    // const fileList = files.filter(file => file.isFile() && file.path);
+    const fileList = files.filter(file => file.isFile());
     console.log(`Found ${fileList.length} files to extract`);
     
     // Create a map to store file contents
@@ -57,6 +58,7 @@ export async function extractAndDownloadFiles(container: WebContainer) {
       console.log(`Found File: ${file} `);
       try {
         const content = await container.fs.readFile(file.path, 'utf8');
+        console.log(`Found File Name: ${file.name} `);
         fileContents.set(file.path, content);
         console.log(`Read file: ${file.path}`);
       } catch (error) {
