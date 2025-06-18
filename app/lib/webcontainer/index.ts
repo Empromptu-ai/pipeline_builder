@@ -73,29 +73,28 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     }
     
     // Use JSZip if available, otherwise download individual files
-    if (typeof window !== 'undefined') {      // } && (window as any).JSZip) {
-      // const JSZip = (window as any).JSZip;
-      const zip = new JSZip();
+    // if (typeof window !== 'undefined') {      // } && (window as any).JSZip) {
+    const zip = new JSZip();
+    
+    fileContents.forEach((content, path) => {
+      // Remove work directory prefix and leading slash for ZIP structure
+      const cleanPath = path.replace(`/${WORK_DIR_NAME}/`, '').replace(/^\//, '');
+      zip.file(cleanPath, content);
+    });
+    
+    // Generate ZIP and download
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    downloadBlob(zipBlob, 'bolt-project.zip');
       
-      fileContents.forEach((content, path) => {
-        // Remove work directory prefix and leading slash for ZIP structure
-        const cleanPath = path.replace(`/${WORK_DIR_NAME}/`, '').replace(/^\//, '');
-        zip.file(cleanPath, content);
-      });
-      
-      // Generate ZIP and download
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      downloadBlob(zipBlob, 'bolt-project.zip');
-      
-    } else {
-      // Fallback: download individual files
-      console.warn('JSZip not available, downloading individual files');
-      fileContents.forEach((content, path) => {
-        const filename = path.split('/').pop() || 'file';
-        const blob = new Blob([content], { type: 'text/plain' });
-        downloadBlob(blob, filename);
-      });
-    }
+    // } else {
+    //   // Fallback: download individual files
+    //   console.warn('JSZip not available, downloading individual files');
+    //   fileContents.forEach((content, path) => {
+    //     const filename = path.split('/').pop() || 'file';
+    //     const blob = new Blob([content], { type: 'text/plain' });
+    //     downloadBlob(blob, filename);
+    //   });
+    // }
     
     console.log(`Successfully extracted ${fileContents.size} files`);
     return fileContents;
@@ -108,7 +107,8 @@ export async function extractAndDownloadFiles(container: WebContainer) {
 
 // Function to create and add deploy button to the page
 export function createDeployButton() {
-  if (typeof window === 'undefined') return; // SSR check
+  // if (typeof window === 'undefined') return; // SSR check
+  if (typeof document === 'undefined') return; // Better check for browser
   
   // Remove existing button if it exists
   const existingButton = document.getElementById('webcontainer-deploy-btn');
