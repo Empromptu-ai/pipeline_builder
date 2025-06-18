@@ -354,9 +354,21 @@ async function getGitHubConfig(providedConfig?: Partial<GitHubConfig>): Promise<
   const envUsername = process.env.REACT_APP_GITHUB_USERNAME;
   const envRepoName = process.env.REACT_APP_GITHUB_REPO_NAME;
 
+  // Debug logging to see what's loaded
+  console.log('Environment variables check:');
+  console.log('Token exists:', !!envToken);
+  console.log('Username exists:', !!envUsername);
+  console.log('Repo name exists:', !!envRepoName);
+  console.log('All env vars:', {
+    token: envToken ? '***hidden***' : 'not found',
+    username: envUsername || 'not found',
+    repoName: envRepoName || 'not found'
+  });
+
   // If all required values are provided via environment or config, use them
   if ((envToken || providedConfig?.token) && 
       (envUsername || providedConfig?.username)) {
+    console.log('Using environment variables for GitHub config');
     return {
       token: providedConfig?.token || envToken!,
       username: providedConfig?.username || envUsername!,
@@ -364,6 +376,7 @@ async function getGitHubConfig(providedConfig?: Partial<GitHubConfig>): Promise<
     };
   }
 
+  console.log('Missing required environment variables, showing modal');
   // Otherwise, show the modal for missing values
   return showGitHubConfigModal({
     token: envToken,
