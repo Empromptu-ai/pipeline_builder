@@ -168,9 +168,15 @@ export async function extractAndDownloadFiles(container: WebContainer) {
 }
 
 // Function to create GitHub repository and upload files
-export async function deployToGitHub(container: WebContainer, config: GitHubConfig) {
+export async function deployToGitHub(container: WebContainer, config?: Partial<GitHubConfig>) {
   try {
     console.log('Starting GitHub deployment...');
+    
+    // Get configuration from environment variables or user input
+    const finalConfig = await getGitHubConfig(config);
+    if (!finalConfig) {
+      throw new Error('GitHub deployment cancelled');
+    }
     
     // Extract files using existing logic, but filter for GitHub
     const fileContents = await extractFiles(container, true);
@@ -181,12 +187,12 @@ export async function deployToGitHub(container: WebContainer, config: GitHubConf
     const createRepoResponse = await fetch('https://api.github.com/user/repos', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${config.token}`,
+        'Authorization': `Bearer ${finalConfig.token}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: config.repoName,
+        name: finalConfig.repoName,
         description: 'Project deployed from WebContainer',
         private: false,
         auto_init: true,
@@ -205,9 +211,9 @@ export async function deployToGitHub(container: WebContainer, config: GitHubConf
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Get the main branch SHA (needed for creating commits)
-    const branchResponse = await fetch(`https://api.github.com/repos/${config.username}/${config.repoName}/git/refs/heads/main`, {
+    const branchResponse = await fetch(`https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/refs/heads/main`, {
       headers: {
-        'Authorization': `Bearer ${config.token}`,
+        'Authorization': `Bearer ${finalConfig.token}`,
         'Accept': 'application/vnd.github.v3+json',
       },
     });
@@ -272,10 +278,10 @@ export async function deployToGitHub(container: WebContainer, config: GitHubConf
     }
 
     // Create tree
-    const treeResponse = await fetch(`https://api.github.com/repos/${config.username}/${config.repoName}/git/trees`, {
+    const treeResponse = await fetch(`https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/trees`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${config.token}`,
+        'Authorization': `Bearer ${finalConfig.token}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
       },
@@ -293,10 +299,10 @@ export async function deployToGitHub(container: WebContainer, config: GitHubConf
     const treeData = await treeResponse.json();
 
     // Create commit
-    const commitResponse = await fetch(`https://api.github.com/repos/${config.username}/${config.repoName}/git/commits`, {
+    const commitResponse = await fetch(`https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/commits`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${config.token}`,
+        'Authorization': `Bearer ${finalConfig.token}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
       },
@@ -315,10 +321,10 @@ export async function deployToGitHub(container: WebContainer, config: GitHubConf
     const commitData = await commitResponse.json();
 
     // Update main branch to point to new commit
-    const updateRefResponse = await fetch(`https://api.github.com/repos/${config.username}/${config.repoName}/git/refs/heads/main`, {
+    const updateRefResponse = await fetch(`https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/refs/heads/main`, {
       method: 'PATCH',
       headers: {
-        'Authorization': `Bearer ${config.token}`,
+        'Authorization': `Bearer ${finalConfig.token}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
       },
@@ -341,8 +347,33 @@ export async function deployToGitHub(container: WebContainer, config: GitHubConf
   }
 }
 
-// Function to show GitHub config modal
-function showGitHubConfigModal(): Promise<GitHubConfig | null> {
+// New function to get GitHub config from environment or user input
+async function getGitHubConfig(providedConfig?: Partial<GitHubConfig>): Promise<GitHubConfig | null> {
+  // Try to get values from environment variables first
+  const envToken = process.env.REACT_APP_GITHUB_TOKEN;
+  const envUsername = process.env.REACT_APP_GITHUB_USERNAME;
+  const envRepoName = process.env.REACT_APP_GITHUB_REPO_NAME;
+
+  // If all required values are provided via environment or config, use them
+  if ((envToken || providedConfig?.token) && 
+      (envUsername || providedConfig?.username)) {
+    return {
+      token: providedConfig?.token || envToken!,
+      username: providedConfig?.username || envUsername!,
+      repoName: providedConfig?.repoName || envRepoName || `webcontainer-project-${Date.now()}`,
+    };
+  }
+
+  // Otherwise, show the modal for missing values
+  return showGitHubConfigModal({
+    token: envToken,
+    username: envUsername,
+    repoName: envRepoName,
+  });
+}
+
+// Modified function to show GitHub config modal with pre-filled values
+function showGitHubConfigModal(prefilledValues?: Partial<GitHubConfig>): Promise<GitHubConfig | null> {
   return new Promise((resolve) => {
     const modal = document.createElement('div');
     modal.style.cssText = `
@@ -372,12 +403,13 @@ function showGitHubConfigModal(): Promise<GitHubConfig | null> {
       <h3 style="margin: 0 0 16px 0; color: #333;">Deploy to GitHub</h3>
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">GitHub Token:</label>
-        <input type="password" id="github-token" placeholder="ghp_..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-        <small style="color: #666;">Create at: Settings → Developer settings → Personal access tokens</small>
+        <input type="password" id="github-token" placeholder="ghp_..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" ${prefilledValues?.token ? 'disabled' : ''}>
+        <small style="color: #666;">${prefilledValues?.token ? 'Token loaded from environment' : 'Create at: Settings → Developer settings → Personal access tokens'}</small>
       </div>
       <div style="margin-bottom: 12px;">
         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">Username:</label>
-        <input type="text" id="github-username" placeholder="your-username" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        <input type="text" id="github-username" placeholder="your-username" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" ${prefilledValues?.username ? 'disabled' : ''}>
+        <small style="color: #666;">${prefilledValues?.username ? 'Username loaded from environment' : ''}</small>
       </div>
       <div style="margin-bottom: 16px;">
         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">Repository Name:</label>
@@ -398,8 +430,18 @@ function showGitHubConfigModal(): Promise<GitHubConfig | null> {
     const cancelBtn = modalContent.querySelector('#cancel-btn') as HTMLButtonElement;
     const deployBtn = modalContent.querySelector('#deploy-btn') as HTMLButtonElement;
 
-    // Pre-fill repo name with timestamp
-    repoInput.value = `webcontainer-project-${Date.now()}`;
+    // Pre-fill values from environment or provided config
+    if (prefilledValues?.token) {
+      tokenInput.value = '••••••••••••••••'; // Show masked token
+      tokenInput.style.color = '#999';
+    }
+    if (prefilledValues?.username) {
+      usernameInput.value = prefilledValues.username;
+      usernameInput.style.color = '#999';
+    }
+    
+    // Pre-fill repo name with provided value or timestamp
+    repoInput.value = prefilledValues?.repoName || `webcontainer-project-${Date.now()}`;
 
     cancelBtn.onclick = () => {
       document.body.removeChild(modal);
@@ -407,8 +449,8 @@ function showGitHubConfigModal(): Promise<GitHubConfig | null> {
     };
 
     deployBtn.onclick = () => {
-      const token = tokenInput.value.trim();
-      const username = usernameInput.value.trim();
+      const token = prefilledValues?.token || tokenInput.value.trim();
+      const username = prefilledValues?.username || usernameInput.value.trim();
       const repoName = repoInput.value.trim();
 
       if (!token || !username || !repoName) {
@@ -420,9 +462,22 @@ function showGitHubConfigModal(): Promise<GitHubConfig | null> {
       resolve({ token, username, repoName });
     };
 
-    // Focus first input
-    tokenInput.focus();
+    // Focus the first non-disabled input
+    if (!prefilledValues?.token) {
+      tokenInput.focus();
+    } else if (!prefilledValues?.username) {
+      usernameInput.focus();
+    } else {
+      repoInput.focus();
+    }
   });
+}
+
+// Type definition (add this if not already present)
+interface GitHubConfig {
+  token: string;
+  username: string;
+  repoName: string;
 }
 
 // Function to create and add GitHub deploy button to the page
@@ -611,6 +666,14 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
 
 
 
+
+
+
+
+
+
+
+
 // import { WebContainer } from '@webcontainer/api';
 // import { WORK_DIR_NAME } from '~/utils/constants';
 // import path from 'node:path';
@@ -651,8 +714,39 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
 //   URL.revokeObjectURL(url);
 // }
 
+// // Function to check if a file should be excluded from GitHub deployment
+// function shouldExcludeFromGitHub(filePath: string): boolean {
+//   const excludePatterns = [
+//     'node_modules',
+//     '.git',
+//     '.DS_Store',
+//     'Thumbs.db',
+//     '*.log',
+//     '.env',
+//     '.env.local',
+//     '.env.production',
+//     'dist',
+//     'build',
+//     '.next',
+//     '.nuxt',
+//     'coverage',
+//     '.nyc_output',
+//     '.cache',
+//     '.temp',
+//     '.tmp'
+//   ];
+  
+//   return excludePatterns.some(pattern => {
+//     if (pattern.includes('*')) {
+//       const regex = new RegExp(pattern.replace('*', '.*'));
+//       return regex.test(filePath);
+//     }
+//     return filePath.includes(pattern);
+//   });
+// }
+
 // // Function to extract all files from WebContainer (your existing logic)
-// export async function extractFiles(container: WebContainer): Promise<Map<string, string | Uint8Array>> {
+// export async function extractFiles(container: WebContainer, forGitHub: boolean = false): Promise<Map<string, string | Uint8Array>> {
 //   try {
 //     console.log('Starting file extraction...');
     
@@ -663,32 +757,58 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
 //       for (const entry of entries) {
 //         const fullPath = path.join(dirPath, entry.name);
 //         if (entry.isFile()) {
+//           // Filter out large/unnecessary files for GitHub deployment
+//           if (forGitHub && shouldExcludeFromGitHub(fullPath)) {
+//             console.log(`Skipping file for GitHub: ${fullPath}`);
+//             continue;
+//           }
 //           allFilePaths.push(fullPath);
 //         } else if (entry.isDirectory()) {
+//           // Skip excluded directories entirely for GitHub
+//           if (forGitHub && shouldExcludeFromGitHub(fullPath)) {
+//             console.log(`Skipping directory for GitHub: ${fullPath}`);
+//             continue;
+//           }
 //           await collectFiles(fullPath);
 //         }
 //       }
 //     }
 //     await collectFiles(process.cwd());
     
+//     console.log(`Found ${allFilePaths.length} files to process`);
+    
 //     // Create a map to store file contents
 //     const fileContents = new Map<string, string | Uint8Array>();
 
 //     // Read all files
 //     for (const file_path of allFilePaths) {    
-//       console.log(`Found File Path: ${file_path} `);
+//       console.log(`Processing File Path: ${file_path}`);
 //       if (!file_path) continue;
 
 //       try {
 //         const content = await container.fs.readFile(file_path, 'utf8');
+        
+//         // Check file size for GitHub (GitHub has a 100MB limit per file, but let's be conservative)
+//         if (forGitHub && typeof content === 'string' && content.length > 1000000) { // 1MB limit for text files
+//           console.warn(`Skipping large file for GitHub: ${file_path} (${content.length} chars)`);
+//           continue;
+//         }
+        
 //         fileContents.set(file_path, content);
-//         console.log(`Read file Path: ${file_path}`);
+//         console.log(`Read text file: ${file_path} (${content.length} chars)`);
 //       } catch (error) {
 //         // Try reading as binary if UTF8 fails
 //         try {
 //           const content = await container.fs.readFile(file_path);
+          
+//           // Check binary file size for GitHub
+//           if (forGitHub && content.length > 1000000) { // 1MB limit for binary files
+//             console.warn(`Skipping large binary file for GitHub: ${file_path} (${content.length} bytes)`);
+//             continue;
+//           }
+          
 //           fileContents.set(file_path, content);
-//           console.log(`Read binary file: ${file_path}`);
+//           console.log(`Read binary file: ${file_path} (${content.length} bytes)`);
 //         } catch (binaryError) {
 //           console.warn(`Failed to read file: ${file_path}`, binaryError);
 //         }
@@ -706,7 +826,7 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
 
 // // Function to extract all files from WebContainer and download as ZIP (your existing function)
 // export async function extractAndDownloadFiles(container: WebContainer) {
-//   const fileContents = await extractFiles(container);
+//   const fileContents = await extractFiles(container, false);
   
 //   const zip = new JSZip();
   
@@ -728,8 +848,10 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
 //   try {
 //     console.log('Starting GitHub deployment...');
     
-//     // Extract files using existing logic
-//     const fileContents = await extractFiles(container);
+//     // Extract files using existing logic, but filter for GitHub
+//     const fileContents = await extractFiles(container, true);
+    
+//     console.log(`Deploying ${fileContents.size} files to GitHub...`);
     
 //     // Create repository
 //     const createRepoResponse = await fetch('https://api.github.com/user/repos', {
@@ -755,6 +877,9 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
 //     const repo = await createRepoResponse.json();
 //     console.log(`Repository created: ${repo.html_url}`);
 
+//     // Wait a moment for repo to be fully initialized
+//     await new Promise(resolve => setTimeout(resolve, 2000));
+
 //     // Get the main branch SHA (needed for creating commits)
 //     const branchResponse = await fetch(`https://api.github.com/repos/${config.username}/${config.repoName}/git/refs/heads/main`, {
 //       headers: {
@@ -763,31 +888,63 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
 //       },
 //     });
 
+//     if (!branchResponse.ok) {
+//       throw new Error(`Failed to get branch info: ${branchResponse.statusText}`);
+//     }
+
 //     const branchData = await branchResponse.json();
 //     const baseSha = branchData.object.sha;
 
 //     // Create tree with all files
 //     const tree = [];
+//     let processedFiles = 0;
+    
 //     for (const [filePath, content] of fileContents) {
 //       const cleanPath = filePath.replace(`/${WORK_DIR_NAME}/`, '').replace(/^\//, '');
       
-//       // Convert content to base64 for GitHub API
-//       let base64Content: string;
-//       if (typeof content === 'string') {
-//         base64Content = btoa(unescape(encodeURIComponent(content)));
-//       } else {
-//         // For binary content
-//         const binaryString = Array.from(content, byte => String.fromCharCode(byte)).join('');
-//         base64Content = btoa(binaryString);
+//       if (!cleanPath || cleanPath === '') {
+//         console.warn(`Skipping file with empty path: ${filePath}`);
+//         continue;
 //       }
 
-//       tree.push({
-//         path: cleanPath,
-//         mode: '100644',
-//         type: 'blob',
-//         content: base64Content,
-//         encoding: 'base64',
-//       });
+//       console.log(`Processing file for GitHub: ${cleanPath}`);
+      
+//       try {
+//         // Convert content to base64 for GitHub API
+//         let base64Content: string;
+//         if (typeof content === 'string') {
+//           base64Content = btoa(unescape(encodeURIComponent(content)));
+//         } else {
+//           // For binary content
+//           const binaryString = Array.from(content, byte => String.fromCharCode(byte)).join('');
+//           base64Content = btoa(binaryString);
+//         }
+
+//         tree.push({
+//           path: cleanPath,
+//           mode: '100644',
+//           type: 'blob',
+//           content: base64Content,
+//           encoding: 'base64',
+//         });
+        
+//         processedFiles++;
+        
+//         // GitHub API has limits, so let's batch if we have too many files
+//         if (tree.length > 100) {
+//           console.warn('Too many files for single commit, truncating to first 100 files');
+//           break;
+//         }
+        
+//       } catch (error) {
+//         console.warn(`Failed to process file ${cleanPath}:`, error);
+//       }
+//     }
+
+//     console.log(`Created tree with ${tree.length} files`);
+
+//     if (tree.length === 0) {
+//       throw new Error('No files to deploy - all files may have been filtered out or failed to process');
 //     }
 
 //     // Create tree
@@ -804,6 +961,11 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
 //       }),
 //     });
 
+//     if (!treeResponse.ok) {
+//       const error = await treeResponse.json();
+//       throw new Error(`Failed to create tree: ${error.message}`);
+//     }
+
 //     const treeData = await treeResponse.json();
 
 //     // Create commit
@@ -815,16 +977,21 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
 //         'Content-Type': 'application/json',
 //       },
 //       body: JSON.stringify({
-//         message: 'Deploy project from WebContainer',
+//         message: `Deploy project from WebContainer (${processedFiles} files)`,
 //         tree: treeData.sha,
 //         parents: [baseSha],
 //       }),
 //     });
 
+//     if (!commitResponse.ok) {
+//       const error = await commitResponse.json();
+//       throw new Error(`Failed to create commit: ${error.message}`);
+//     }
+
 //     const commitData = await commitResponse.json();
 
 //     // Update main branch to point to new commit
-//     await fetch(`https://api.github.com/repos/${config.username}/${config.repoName}/git/refs/heads/main`, {
+//     const updateRefResponse = await fetch(`https://api.github.com/repos/${config.username}/${config.repoName}/git/refs/heads/main`, {
 //       method: 'PATCH',
 //       headers: {
 //         'Authorization': `Bearer ${config.token}`,
@@ -836,7 +1003,12 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
 //       }),
 //     });
 
-//     console.log(`Successfully deployed to GitHub: ${repo.html_url}`);
+//     if (!updateRefResponse.ok) {
+//       const error = await updateRefResponse.json();
+//       throw new Error(`Failed to update branch: ${error.message}`);
+//     }
+
+//     console.log(`Successfully deployed ${processedFiles} files to GitHub: ${repo.html_url}`);
 //     return repo;
 
 //   } catch (error) {
