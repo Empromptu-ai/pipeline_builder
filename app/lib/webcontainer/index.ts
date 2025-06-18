@@ -486,13 +486,6 @@ function showGitHubConfigModal(prefilledValues?: Partial<GitHubConfig>): Promise
   });
 }
 
-// Type definition (add this if not already present)
-interface GitHubConfig {
-  token: string;
-  username: string;
-  repoName: string;
-}
-
 // Function to create and add GitHub deploy button to the page
 export function createGitHubDeployButton() {
   if (typeof document === 'undefined') return;
@@ -535,15 +528,12 @@ export function createGitHubDeployButton() {
   
   button.onclick = async () => {
     try {
-      // Show configuration modal
-      const config = await showGitHubConfigModal();
-      if (!config) return; // User cancelled
-      
       button.textContent = '⏳ Deploying...';
       button.disabled = true;
       
       const container = await webcontainer;
-      const repo = await deployToGitHub(container, config);
+      // Let deployToGitHub handle the config (environment variables or modal)
+      const repo = await deployToGitHub(container);
       
       button.textContent = '✅ Deployed!';
       
@@ -569,6 +559,13 @@ export function createGitHubDeployButton() {
   
   document.body.appendChild(button);
   return button;
+}
+
+// Type definition (add this if not already present)
+interface GitHubConfig {
+  token: string;
+  username: string;
+  repoName: string;
 }
 
 // Function to create and add deploy button to the page (your existing function)
