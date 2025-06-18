@@ -350,9 +350,9 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
 // New function to get GitHub config from environment or user input
 async function getGitHubConfig(providedConfig?: Partial<GitHubConfig>): Promise<GitHubConfig | null> {
   // Try to get values from environment variables first
-  const envToken = process.env.VITE_GITHUB_TOKEN;
-  const envUsername = process.env.VITE_GITHUB_USERNAME;
-  const envRepoName = process.env.VITE_GITHUB_REPO_NAME;
+  const envToken = import.meta.env.VITE_GITHUB_TOKEN;
+  const envUsername = import.meta.env.VITE_GITHUB_USERNAME;
+  const envRepoName = import.meta.env.VITE_GITHUB_REPO_NAME;
 
   // Debug logging to see what's loaded
   console.log('Environment variables check:');
