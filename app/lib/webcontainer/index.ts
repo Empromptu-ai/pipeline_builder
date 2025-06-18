@@ -72,6 +72,8 @@ export async function extractAndDownloadFiles(container: WebContainer) {
     }
   }
   await collectFiles(process.cwd());
+  // Create a map to store file contents
+  const fileContents = new Map<string, string | Uint8Array>();
 
   // Read all files
   for (const file_path of allFilePaths) {    
