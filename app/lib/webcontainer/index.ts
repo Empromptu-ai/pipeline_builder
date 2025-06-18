@@ -37,21 +37,46 @@ export async function extractAndDownloadFiles(container: WebContainer) {
   try {
     console.log('Starting file extraction...');
     
-    // Get all files recursively from the work directory
-    const files = await container.fs.readdir(process.cwd(), { recursive: true, withFileTypes: true });
-    console.log(`Found files: ${files} `);
-    // Filter out directories, keep only files
-    const fileList = files.filter(file => file.isFile());
-    console.log(`Found ${fileList.length} files to extract`);
     
-    // Create a map to store file contents
-    const fileContents = new Map<string, string | Uint8Array>();
     
-    // Read all files
-    for (const file of fileList) {
-      console.log(`Found File: ${file} `);
-      console.log(`Found File Name: ${file.name} `);
-      const file_path = path.join(process.cwd(), file.name);
+    
+    // // Get all files recursively from the work directory
+    // const files = await container.fs.readdir(process.cwd(), { recursive: true, withFileTypes: true });
+    // console.log(`Found files: ${files} `);
+    // // Filter out directories, keep only files
+    // const fileList = files.filter(file => file.isFile());
+    // console.log(`Found ${fileList.length} files to extract`);
+    
+    // // Create a map to store file contents
+    // const fileContents = new Map<string, string | Uint8Array>();
+    
+    // // Read all files
+    // for (const file of fileList) {
+    //   console.log(`Found File: ${file} `);
+    //   console.log(`Found File Name: ${file.name} `);
+    //   const file_path = path.join(process.cwd(), file.name);
+
+
+
+  // Recursively collect all file paths
+  const allFilePaths = [];
+  async function collectFiles(dirPath) {
+    const entries = await container.fs.readdir(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isFile()) {
+        allFilePaths.push(fullPath);
+      } else if (entry.isDirectory()) {
+        await collectFiles(fullPath);
+      }
+    }
+  }
+  await collectFiles(process.cwd());
+
+  // Read all files
+  for (const file_path of allFilePaths) {    
+      // Use the file's parentPath + name to get full path
+      // const file_path = file.parentPath ? path.join(file.parentPath, file.name) : file.name;
       console.log(`Found File Path: ${file_path} `);
       if (!file_path) continue; // Skip if path is undefined
 
