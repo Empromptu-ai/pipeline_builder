@@ -635,8 +635,8 @@ export function createDeployButton() {
   document.body.appendChild(button);
   return button;
 }
-
 ////////////////////////////////////////////////////
+
 // Add this code to your existing file - it works alongside your current functions
 
 // Netlify API configuration interface
@@ -707,23 +707,60 @@ export async function deployToNetlify(container: WebContainer, config?: Partial<
     const netlifyData = await netlifyCreateResponse.json();
     console.log(`Netlify site created: ${netlifyData.ssl_url || netlifyData.url}`);
 
-    // Step 3: Trigger initial deploy
-    console.log('Step 3: Triggering initial deployment...');
+    // Step 3: Trigger initial deploy from GitHub
+    console.log('Step 3: Triggering initial deployment from GitHub...');
     
-    const deployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${netlifyData.id}/deploys`, {
+    // First, let's set up the build hook properly
+    const buildHookResponse = await fetch(`https://api.netlify.com/api/v1/sites/${netlifyData.id}/build_hooks`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${finalConfig.netlifyToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        title: 'GitHub Deploy Hook',
         branch: 'main'
       }),
     });
 
-    if (!deployResponse.ok) {
-      const error = await deployResponse.json();
-      console.warn(`Deploy trigger failed: ${error.message}, but site was created successfully`);
+    if (buildHookResponse.ok) {
+      const buildHook = await buildHookResponse.json();
+      console.log('Build hook created:', buildHook.url);
+      
+      // Trigger the build using the build hook
+      const triggerResponse = await fetch(buildHook.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      });
+
+      if (triggerResponse.ok) {
+        console.log('Build triggered successfully');
+      } else {
+        console.warn('Build trigger failed, but site was created successfully');
+      }
+    } else {
+      // Fallback: try to trigger deploy directly from the repo
+      console.log('Fallback: Triggering deploy from repository...');
+      
+      const deployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${netlifyData.id}/deploys`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${finalConfig.netlifyToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          branch: 'main',
+          title: 'Initial deploy from WebContainer'
+        }),
+      });
+
+      if (!deployResponse.ok) {
+        const error = await deployResponse.json();
+        console.warn(`Deploy trigger failed: ${error.message}, but site was created successfully`);
+      }
     }
 
     console.log(`Successfully deployed to GitHub and Netlify!`);
@@ -960,12 +997,12 @@ export function createNetlifyDeployButton() {
       button.textContent = '✅ Deployed!';
       
       // Show success message with links
-      setTimeout(() => {
+              setTimeout(() => {
         const netlifyUrl = result.netlify.ssl_url || result.netlify.url;
-        const message = `Successfully deployed!\n\nGitHub: ${result.github.html_url}\nNetlify: ${netlifyUrl}\n\nOpen Netlify site?`;
+        const message = `Successfully deployed!\n\nGitHub: ${result.github.html_url}\nNetlify: ${netlifyUrl}\n\nNote: Netlify is building your site - it may take 1-2 minutes to be live.\n\nOpen Netlify dashboard?`;
         
         if (confirm(message)) {
-          window.open(netlifyUrl, '_blank');
+          window.open(`https://app.netlify.com/sites/${result.netlify.name}/deploys`, '_blank');
         }
         button.textContent = '🌐 Deploy to Netlify';
         button.disabled = false;
@@ -991,6 +1028,364 @@ export async function deployProjectToNetlify(config: NetlifyConfig & GitHubConfi
   const container = await webcontainer;
   return deployToNetlify(container, config);
 }
+
+
+
+////////////////////////////////////////////////////
+// // Add this code to your existing file - it works alongside your current functions
+
+// // Netlify API configuration interface
+// interface NetlifyConfig {
+//   token: string;
+//   siteName: string;
+// }
+
+// // Function to deploy to both GitHub and Netlify
+// export async function deployToNetlify(container: WebContainer, config?: Partial<NetlifyConfig & GitHubConfig>) {
+//   try {
+//     console.log('Starting GitHub + Netlify deployment...');
+    
+//     // Get configuration from environment variables or user input
+//     const finalConfig = await getNetlifyConfig(config);
+//     if (!finalConfig) {
+//       throw new Error('Netlify deployment cancelled');
+//     }
+    
+//     // First, deploy to GitHub (reusing your existing function)
+//     console.log('Step 1: Deploying to GitHub...');
+//     const githubConfig = {
+//       token: finalConfig.githubToken,
+//       username: finalConfig.githubUsername,
+//       repoName: finalConfig.siteName // Use site name as repo name for consistency
+//     };
+    
+//     const repo = await deployToGitHub(container, githubConfig);
+//     console.log('GitHub deployment successful:', repo.html_url);
+    
+//     // Wait a moment for GitHub to be ready
+//     await new Promise(resolve => setTimeout(resolve, 3000));
+    
+//     // Step 2: Create Netlify site connected to GitHub repo
+//     console.log('Step 2: Creating Netlify site...');
+    
+//     const netlifyCreateResponse = await fetch('https://api.netlify.com/api/v1/sites', {
+//       method: 'POST',
+//       headers: {
+//         'Authorization': `Bearer ${finalConfig.netlifyToken}`,
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({
+//         name: finalConfig.siteName,
+//         repo: {
+//           provider: 'github',
+//           repo: `${finalConfig.githubUsername}/${finalConfig.siteName}`,
+//           branch: 'main',
+//           dir: '/',
+//           cmd: 'npm run build', // Default build command
+//           env: {}
+//         },
+//         build_settings: {
+//           provider: 'github',
+//           repo: `${finalConfig.githubUsername}/${finalConfig.siteName}`,
+//           branch: 'main',
+//           dir: '/',
+//           cmd: 'npm run build'
+//         }
+//       }),
+//     });
+
+//     if (!netlifyCreateResponse.ok) {
+//       const error = await netlifyCreateResponse.json();
+//       throw new Error(`Failed to create Netlify site: ${error.message}`);
+//     }
+
+//     const netlifyData = await netlifyCreateResponse.json();
+//     console.log(`Netlify site created: ${netlifyData.ssl_url || netlifyData.url}`);
+
+//     // Step 3: Trigger initial deploy
+//     console.log('Step 3: Triggering initial deployment...');
+    
+//     const deployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${netlifyData.id}/deploys`, {
+//       method: 'POST',
+//       headers: {
+//         'Authorization': `Bearer ${finalConfig.netlifyToken}`,
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({
+//         branch: 'main'
+//       }),
+//     });
+
+//     if (!deployResponse.ok) {
+//       const error = await deployResponse.json();
+//       console.warn(`Deploy trigger failed: ${error.message}, but site was created successfully`);
+//     }
+
+//     console.log(`Successfully deployed to GitHub and Netlify!`);
+//     return {
+//       github: repo,
+//       netlify: netlifyData
+//     };
+
+//   } catch (error) {
+//     console.error('Failed to deploy to Netlify:', error);
+//     throw error;
+//   }
+// }
+
+// // Function to get Netlify config from environment or user input
+// async function getNetlifyConfig(providedConfig?: Partial<NetlifyConfig & GitHubConfig>): Promise<{
+//   netlifyToken: string;
+//   githubToken: string;
+//   githubUsername: string;
+//   siteName: string;
+// } | null> {
+//   // Try to get values from environment variables first
+//   const envNetlifyToken = import.meta.env.VITE_NETLIFY_TOKEN;
+//   const envGithubToken = import.meta.env.VITE_GITHUB_TOKEN;
+//   const envGithubUsername = import.meta.env.VITE_GITHUB_USERNAME;
+
+//   console.log('Netlify environment variables check:');
+//   console.log('Netlify token exists:', !!envNetlifyToken);
+//   console.log('GitHub token exists:', !!envGithubToken);
+//   console.log('GitHub username exists:', !!envGithubUsername);
+
+//   // If all required values are available, use them
+//   if ((envNetlifyToken || providedConfig?.token) && 
+//       (envGithubToken || providedConfig?.githubToken) && 
+//       (envGithubUsername || providedConfig?.githubUsername)) {
+//     console.log('Using environment variables for Netlify config');
+//     return {
+//       netlifyToken: providedConfig?.token || envNetlifyToken!,
+//       githubToken: providedConfig?.githubToken || envGithubToken!,
+//       githubUsername: providedConfig?.githubUsername || envGithubUsername!,
+//       siteName: providedConfig?.siteName || `webcontainer-site-${Date.now()}`,
+//     };
+//   }
+
+//   console.log('Missing required environment variables, showing modal');
+//   // Otherwise, show the modal for missing values
+//   return showNetlifyConfigModal({
+//     netlifyToken: envNetlifyToken,
+//     githubToken: envGithubToken,
+//     githubUsername: envGithubUsername,
+//   });
+// }
+
+// // Function to show Netlify config modal
+// function showNetlifyConfigModal(prefilledValues?: {
+//   netlifyToken?: string;
+//   githubToken?: string;
+//   githubUsername?: string;
+// }): Promise<{
+//   netlifyToken: string;
+//   githubToken: string;
+//   githubUsername: string;
+//   siteName: string;
+// } | null> {
+//   return new Promise((resolve) => {
+//     const modal = document.createElement('div');
+//     modal.style.cssText = `
+//       position: fixed;
+//       top: 0;
+//       left: 0;
+//       width: 100%;
+//       height: 100%;
+//       background: rgba(0, 0, 0, 0.5);
+//       display: flex;
+//       align-items: center;
+//       justify-content: center;
+//       z-index: 10000;
+//     `;
+
+//     const modalContent = document.createElement('div');
+//     modalContent.style.cssText = `
+//       background: white;
+//       padding: 24px;
+//       border-radius: 12px;
+//       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+//       max-width: 450px;
+//       width: 90%;
+//       max-height: 80vh;
+//       overflow-y: auto;
+//     `;
+
+//     modalContent.innerHTML = `
+//       <h3 style="margin: 0 0 16px 0; color: #333;">Deploy to GitHub + Netlify</h3>
+//       <p style="margin-bottom: 16px; color: #666; font-size: 14px;">This will create a GitHub repository and deploy it to Netlify.</p>
+      
+//       <div style="margin-bottom: 12px;">
+//         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">GitHub Token:</label>
+//         <input type="password" id="netlify-github-token" placeholder="ghp_..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" ${prefilledValues?.githubToken ? 'disabled' : ''}>
+//         <small style="color: #666;">${prefilledValues?.githubToken ? 'Token loaded from environment' : 'Create at: GitHub Settings → Developer settings → Personal access tokens'}</small>
+//       </div>
+      
+//       <div style="margin-bottom: 12px;">
+//         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">GitHub Username:</label>
+//         <input type="text" id="netlify-github-username" placeholder="your-username" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" ${prefilledValues?.githubUsername ? 'disabled' : ''}>
+//         <small style="color: #666;">${prefilledValues?.githubUsername ? 'Username loaded from environment' : ''}</small>
+//       </div>
+      
+//       <div style="margin-bottom: 12px;">
+//         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">Netlify Token:</label>
+//         <input type="password" id="netlify-token" placeholder="netlify_token..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" ${prefilledValues?.netlifyToken ? 'disabled' : ''}>
+//         <small style="color: #666;">${prefilledValues?.netlifyToken ? 'Token loaded from environment' : 'Create at: Netlify User settings → Applications → Personal access tokens'}</small>
+//       </div>
+      
+//       <div style="margin-bottom: 16px;">
+//         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">Site Name:</label>
+//         <input type="text" id="netlify-site-name" placeholder="my-awesome-site" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+//         <small style="color: #666;">This will be your Netlify URL (sitename.netlify.app) and GitHub repo name</small>
+//       </div>
+      
+//       <div style="display: flex; gap: 8px; justify-content: flex-end;">
+//         <button id="netlify-cancel-btn" style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">Cancel</button>
+//         <button id="netlify-deploy-btn" style="padding: 8px 16px; background: #00ad9f; color: white; border: none; border-radius: 4px; cursor: pointer;">Deploy</button>
+//       </div>
+//     `;
+
+//     modal.appendChild(modalContent);
+//     document.body.appendChild(modal);
+
+//     const githubTokenInput = modalContent.querySelector('#netlify-github-token') as HTMLInputElement;
+//     const githubUsernameInput = modalContent.querySelector('#netlify-github-username') as HTMLInputElement;
+//     const netlifyTokenInput = modalContent.querySelector('#netlify-token') as HTMLInputElement;
+//     const siteNameInput = modalContent.querySelector('#netlify-site-name') as HTMLInputElement;
+//     const cancelBtn = modalContent.querySelector('#netlify-cancel-btn') as HTMLButtonElement;
+//     const deployBtn = modalContent.querySelector('#netlify-deploy-btn') as HTMLButtonElement;
+
+//     // Pre-fill values from environment
+//     if (prefilledValues?.githubToken) {
+//       githubTokenInput.value = '••••••••••••••••';
+//       githubTokenInput.style.color = '#999';
+//     }
+//     if (prefilledValues?.githubUsername) {
+//       githubUsernameInput.value = prefilledValues.githubUsername;
+//       githubUsernameInput.style.color = '#999';
+//     }
+//     if (prefilledValues?.netlifyToken) {
+//       netlifyTokenInput.value = '••••••••••••••••';
+//       netlifyTokenInput.style.color = '#999';
+//     }
+    
+//     // Generate a default site name
+//     siteNameInput.value = `webcontainer-site-${Date.now()}`;
+
+//     cancelBtn.onclick = () => {
+//       document.body.removeChild(modal);
+//       resolve(null);
+//     };
+
+//     deployBtn.onclick = () => {
+//       const githubToken = prefilledValues?.githubToken || githubTokenInput.value.trim();
+//       const githubUsername = prefilledValues?.githubUsername || githubUsernameInput.value.trim();
+//       const netlifyToken = prefilledValues?.netlifyToken || netlifyTokenInput.value.trim();
+//       const siteName = siteNameInput.value.trim();
+
+//       if (!githubToken || !githubUsername || !netlifyToken || !siteName) {
+//         alert('Please fill in all fields');
+//         return;
+//       }
+
+//       document.body.removeChild(modal);
+//       resolve({ githubToken, githubUsername, netlifyToken, siteName });
+//     };
+
+//     // Focus the first non-disabled input
+//     if (!prefilledValues?.githubToken) {
+//       githubTokenInput.focus();
+//     } else if (!prefilledValues?.githubUsername) {
+//       githubUsernameInput.focus();
+//     } else if (!prefilledValues?.netlifyToken) {
+//       netlifyTokenInput.focus();
+//     } else {
+//       siteNameInput.focus();
+//     }
+//   });
+// }
+
+// // Function to create and add Netlify deploy button to the page
+// export function createNetlifyDeployButton() {
+//   if (typeof document === 'undefined') return;
+  
+//   // Remove existing button if it exists
+//   const existingButton = document.getElementById('netlify-deploy-btn');
+//   if (existingButton) {
+//     existingButton.remove();
+//   }
+  
+//   const button = document.createElement('button');
+//   button.id = 'netlify-deploy-btn';
+//   button.textContent = '🌐 Deploy to Netlify';
+//   button.style.cssText = `
+//     position: fixed;
+//     top: 20px;
+//     right: 340px;
+//     z-index: 9999;
+//     padding: 12px 16px;
+//     background: linear-gradient(135deg, #00ad9f 0%, #00c7b7 100%);
+//     color: white;
+//     border: none;
+//     border-radius: 8px;
+//     cursor: pointer;
+//     font-weight: 600;
+//     font-size: 14px;
+//     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+//     transition: all 0.3s ease;
+//   `;
+  
+//   button.onmouseover = () => {
+//     button.style.transform = 'translateY(-2px)';
+//     button.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+//   };
+  
+//   button.onmouseout = () => {
+//     button.style.transform = 'translateY(0)';
+//     button.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
+//   };
+  
+//   button.onclick = async () => {
+//     try {
+//       button.textContent = '⏳ Deploying...';
+//       button.disabled = true;
+      
+//       const container = await webcontainer;
+//       const result = await deployToNetlify(container);
+      
+//       button.textContent = '✅ Deployed!';
+      
+//       // Show success message with links
+//       setTimeout(() => {
+//         const netlifyUrl = result.netlify.ssl_url || result.netlify.url;
+//         const message = `Successfully deployed!\n\nGitHub: ${result.github.html_url}\nNetlify: ${netlifyUrl}\n\nOpen Netlify site?`;
+        
+//         if (confirm(message)) {
+//           window.open(netlifyUrl, '_blank');
+//         }
+//         button.textContent = '🌐 Deploy to Netlify';
+//         button.disabled = false;
+//       }, 2000);
+      
+//     } catch (error) {
+//       console.error('Netlify deploy failed:', error);
+//       button.textContent = '❌ Failed';
+//       alert(`Deployment failed: ${error.message}`);
+//       setTimeout(() => {
+//         button.textContent = '🌐 Deploy to Netlify';
+//         button.disabled = false;
+//       }, 2000);
+//     }
+//   };
+  
+//   document.body.appendChild(button);
+//   return button;
+// }
+
+// // Utility function to manually trigger Netlify deployment
+// export async function deployProjectToNetlify(config: NetlifyConfig & GitHubConfig) {
+//   const container = await webcontainer;
+//   return deployToNetlify(container, config);
+// }
 
 ////////////////////////////////////////////////////
 
