@@ -251,9 +251,11 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
         // }
 
         // Convert content to base64 for GitHub API
-        const base64Content = typeof content === 'string' 
-        ? btoa(content) 
-        : btoa(String.fromCharCode(...new Uint8Array(content)));
+        // const base64Content = typeof content === 'string' 
+        // ? btoa(content) 
+        // : btoa(String.fromCharCode(...new Uint8Array(content)));
+        // already base64, apparently
+        const base64Content = content;
 
 
 
