@@ -179,7 +179,7 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
     }
     
     // Extract files using existing logic, but filter for GitHub
-    const fileContents = await extractFiles(container, false);
+    const fileContents = await extractFiles(container, true);
     
     console.log(`Deploying ${fileContents.size} files to GitHub...`);
     
@@ -240,15 +240,22 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
       console.log(`Processing file for GitHub: ${cleanPath}`);
       
       try {
+        // // Convert content to base64 for GitHub API
+        // let base64Content: string;
+        // if (typeof content === 'string') {
+        //   base64Content = btoa(unescape(encodeURIComponent(content)));
+        // } else {
+        //   // For binary content
+        //   const binaryString = Array.from(content, byte => String.fromCharCode(byte)).join('');
+        //   base64Content = btoa(binaryString);
+        // }
+
         // Convert content to base64 for GitHub API
-        let base64Content: string;
-        if (typeof content === 'string') {
-          base64Content = btoa(unescape(encodeURIComponent(content)));
-        } else {
-          // For binary content
-          const binaryString = Array.from(content, byte => String.fromCharCode(byte)).join('');
-          base64Content = btoa(binaryString);
-        }
+        const base64Content = typeof content === 'string' 
+        ? btoa(content) 
+        : btoa(String.fromCharCode(...new Uint8Array(content)));
+
+
 
         tree.push({
           path: cleanPath,
@@ -1095,7 +1102,7 @@ export async function deployToNetlify(container: WebContainer, config?: Partial<
     console.log('Step 3: Deploying files directly to Netlify...');
     
     // Extract files again for Netlify deployment
-    const fileContents = await extractFiles(container, false);
+    const fileContents = await extractFiles(container, true);
     
     // Create a form data object for file upload
     const formData = new FormData();
