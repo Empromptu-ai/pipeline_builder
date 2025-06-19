@@ -179,7 +179,7 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
     }
     
     // Extract files using existing logic, but filter for GitHub
-    const fileContents = await extractFiles(container, true);
+    const fileContents = await extractFiles(container, false);
     
     console.log(`Deploying ${fileContents.size} files to GitHub...`);
     
@@ -1095,7 +1095,7 @@ export async function deployToNetlify(container: WebContainer, config?: Partial<
     console.log('Step 3: Deploying files directly to Netlify...');
     
     // Extract files again for Netlify deployment
-    const fileContents = await extractFiles(container, true);
+    const fileContents = await extractFiles(container, false);
     
     // Create a form data object for file upload
     const formData = new FormData();
