@@ -86,6 +86,7 @@ completed_tasks: Dict[str, Dict] = {}
 class DataEntry(BaseModel):
     key_list: List[str]
     value: str
+    summary_value: Optional[str] = None
 
 class DataObject(BaseModel):
     object_name: str
@@ -1224,24 +1225,61 @@ async def get_or_create_object(object_name: str) -> Dict[str, Any]:
         await collection.insert_one(new_obj)
         print(f"creating object: {new_obj}")
         return new_obj
+    
+async def create_summary_value(value):
+    # if the data is sufficiently short, just return nothing.
+    if len(str(value)) < 1000:
+        return None
+    prompt = 
+    f'''
+    Here is a document extracted from the web which may contain HTML fragments or other formatting tokens. Write a 30-word summary of this document.
+
+    {value}
+    
+    '''
+    response_json = call_openai_api(prompt, ['summary']) 
+    ret = None
+    try:
+        ret = response_json.get('summary', None)
+    except Exception as e:
+        print(f'WARNING: Issue with creating data summary: {e}')
+    return ret
+
 
 async def add_data_entry(object_name: str, key_list: List[str], value: str):
     """Add a data entry to an object"""
     print(f"adding data entry: {object_name}, {key_list}, {value}")
+    
+    # Build the data entry dict
+    data_entry = {"key_list": key_list, "value": value}
+    
+    summary_value = await create_summary_value(value)
+    if summary_value is not None:
+        data_entry["summary_value"] = summary_value
+    
     await collection.update_one(
         {"object_name": object_name},
-        {"$push": {"data": {"key_list": key_list, "value": value}}}
+        {"$push": {"data": data_entry}}
     )
+    
+    
+    # """Add a data entry to an object"""
+    # print(f"adding data entry: {object_name}, {key_list}, {value}")
+    # await collection.update_one(
+    #     {"object_name": object_name},
+    #     {"$push": {"data": {"key_list": key_list, "value": value}}}
+    # )
 
 def combine_events(data_entries: List[DataEntry]) -> DataEntry:
     """Combine multiple data entries into one"""
     combined_value = " ".join([entry.value for entry in data_entries])
+    combined_summary = " ".join([entry.summary_value for entry in data_entries if entry.summary_value is not None])
     combined_keys = []
     for entry in data_entries:
         combined_keys.extend(entry.key_list)
     unique_keys = list(set(combined_keys))
     
-    return DataEntry(key_list=unique_keys, value=combined_value)
+    return DataEntry(key_list=unique_keys, value=combined_value, summary_value=combined_summary if combined_summary else None)
 
 def get_matching_entries(entries1: List[DataEntry], entries2: List[DataEntry]) -> List[tuple]:
     """Get pairs of entries that have matching keys"""
@@ -1401,8 +1439,14 @@ async def apply_prompt(request: ApplyPromptRequest):
             all_keys = []
             
             for input_name, data_entry in combo.items():
+                # NOTE:  Here we figure out when we should use the summary value instead.
+                length_of_main_value = len(str(data_entry.value))
+                value_to_use = str(data_entry.value)
+                if length_of_main_value > 2000:
+                    value_to_use = data_entry.summary_value
+                
                 placeholder = "{" + input_name + "}"
-                filled_prompt = filled_prompt.replace(placeholder, str(data_entry.value))
+                filled_prompt = filled_prompt.replace(placeholder, value_to_use)
                 all_keys.extend(data_entry.key_list)
             
             # Call OpenAI API
@@ -1569,66 +1613,66 @@ async def delete_object(object_name: str):
         raise HTTPException(status_code=404, detail="Object not found")
     return {"message": f"Object {object_name} deleted successfully"}
 
-@app.post("/scrape_urls")
-async def scrape_urls(
-    object_name: str = Body(...),
-    urls: Union[str, List[str]] = Body(...)
-):
-    """
-    Legacy endpoint: Scrape URLs and create data object with the new system structure.
-    This endpoint maintains backward compatibility while using the new data model.
-    """
-    try:
-        # Convert input to list
-        if isinstance(urls, str):
-            url_list = [normalize_url(url.strip()) for url in urls.split(',') if url.strip()]
-        else:
-            url_list = [normalize_url(str(url).strip()) for url in urls if str(url).strip()]
+# @app.post("/scrape_urls")
+# async def scrape_urls(
+#     object_name: str = Body(...),
+#     urls: Union[str, List[str]] = Body(...)
+# ):
+#     """
+#     Legacy endpoint: Scrape URLs and create data object with the new system structure.
+#     This endpoint maintains backward compatibility while using the new data model.
+#     """
+#     try:
+#         # Convert input to list
+#         if isinstance(urls, str):
+#             url_list = [normalize_url(url.strip()) for url in urls.split(',') if url.strip()]
+#         else:
+#             url_list = [normalize_url(str(url).strip()) for url in urls if str(url).strip()]
         
-        # Get or create the target object
-        await get_or_create_object(object_name)
+#         # Get or create the target object
+#         await get_or_create_object(object_name)
         
-        # Process URLs
-        processed_count = 0
-        for url in url_list:
-            try:
-                # Use the existing get_text_from_url function
-                content = await get_text_from_url(url)
+#         # Process URLs
+#         processed_count = 0
+#         for url in url_list:
+#             try:
+#                 # Use the existing get_text_from_url function
+#                 content = await get_text_from_url(url)
                 
-                # Create UUID for this entry (matches new system structure)
-                entry_uuid = str(uuid.uuid4())
+#                 # Create UUID for this entry (matches new system structure)
+#                 entry_uuid = str(uuid.uuid4())
                 
-                # Add to database using new system structure
-                await add_data_entry(
-                    object_name=object_name,
-                    key_list=[entry_uuid],  # Use UUID as key like the new system
-                    value=content
-                )
+#                 # Add to database using new system structure
+#                 await add_data_entry(
+#                     object_name=object_name,
+#                     key_list=[entry_uuid],  # Use UUID as key like the new system
+#                     value=content
+#                 )
                 
-                processed_count += 1
+#                 processed_count += 1
                 
-            except Exception as e:
-                # Still process failed URLs but with error message
-                error_content = f"--- Failed to fetch from {url}: {str(e)} ---"
-                entry_uuid = str(uuid.uuid4())
+#             except Exception as e:
+#                 # Still process failed URLs but with error message
+#                 error_content = f"--- Failed to fetch from {url}: {str(e)} ---"
+#                 entry_uuid = str(uuid.uuid4())
                 
-                await add_data_entry(
-                    object_name=object_name,
-                    key_list=[entry_uuid],
-                    value=error_content
-                )
+#                 await add_data_entry(
+#                     object_name=object_name,
+#                     key_list=[entry_uuid],
+#                     value=error_content
+#                 )
         
-        return JSONResponse(
-            content={
-                "message": f"URLs scraped and saved under object_name: {object_name}",
-                "urls_processed": len(url_list),
-                "rows_created": processed_count,
-                "object_name": object_name
-            }
-        )
+#         return JSONResponse(
+#             content={
+#                 "message": f"URLs scraped and saved under object_name: {object_name}",
+#                 "urls_processed": len(url_list),
+#                 "rows_created": processed_count,
+#                 "object_name": object_name
+#             }
+#         )
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 # Health check endpoint
 @app.get("/health")
