@@ -1230,8 +1230,7 @@ async def create_summary_value(value):
     # if the data is sufficiently short, just return nothing.
     if len(str(value)) < 1000:
         return None
-    prompt = 
-    f'''
+    prompt = f'''
     Here is a document extracted from the web which may contain HTML fragments or other formatting tokens. Write a 30-word summary of this document.
 
     {value}
