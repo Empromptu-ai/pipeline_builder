@@ -1236,7 +1236,7 @@ async def create_summary_value(value):
     {value}
     
     '''
-    response_json = call_openai_api(prompt, ['summary']) 
+    response_json = await call_openai_api(prompt, ['summary']) 
     ret = None
     try:
         ret = response_json.get('summary', None)
