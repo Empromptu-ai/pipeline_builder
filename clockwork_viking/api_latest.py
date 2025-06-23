@@ -731,7 +731,7 @@ async def research_topic(request: ResearchTopicRequest,user_token: str = Depends
                 f"Return an object with the following key: {', '.join(request.return_data)}. Do not nest additional keys or categories under this key, it should just contain a single string."
             )
         logger.info(f"Starting Skyvern task {task_id} with webhook URL: {webhook_url}")
-        
+        logger.info(f"sending this prompt text: {prompt_text}")
         # Start the Skyvern task with webhook
         skyvern_result = await skyvern_client.run_task(
             # skyvern_client.run_task(
