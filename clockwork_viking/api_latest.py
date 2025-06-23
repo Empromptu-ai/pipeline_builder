@@ -109,7 +109,8 @@ async def parse_user_tokens(description):
         userId = split_tokens[0]
         UID = split_tokens[1]
         return userId, UID
-    return None, None
+    except Exception as e:
+        return None, None
     
 # Pydantic models
 class DataEntry(BaseModel):
