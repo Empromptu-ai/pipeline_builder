@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Body
+from fastapi import FastAPI, HTTPException, UploadFile, File, Body, Depends, Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any, Union, Optional
@@ -81,6 +81,24 @@ webhook_base_url = os.getenv("API_URL", "https://staging.impromptu-labs.com")
 # In-memory storage for research tasks/Skyvern (we could use a database in production)
 pending_tasks: Dict[str, Dict] = {}
 completed_tasks: Dict[str, Dict] = {}
+
+
+# Dependency function to extract and validate the input token
+async def get_user_token(authorization: Optional[str] = Header(None)) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    # Handle "Bearer token" format
+    if authorization.startswith("Bearer "):
+        token = authorization[7:]  # Remove "Bearer " prefix
+    else:
+        token = authorization
+    
+    # Add token validation logic here if needed
+    # if not is_valid_token(token):
+    #     raise HTTPException(status_code=401, detail="Invalid token")
+    
+    return token
 
 # Pydantic models
 class DataEntry(BaseModel):
@@ -178,156 +196,6 @@ class SimplifiedAgentBuilder:
         if tool_name is None:
             tool_name = f"{method.lower()}_{endpoint_path.strip('/').replace('/', '_').replace('-', '_')}"
 
-        # sync/async attempt ###########
-        
-        # async def async_api_tool_function(*args, **kwargs) -> str:
-        #     try:
-        #         # Handle both positional and keyword arguments
-        #         # If we get positional args, try to parse as JSON or use as single param
-        #         if args:
-        #             if len(args) == 1 and isinstance(args[0], str):
-        #                 try:
-        #                     # Try to parse as JSON first
-        #                     print('Trying to parse as json...')
-        #                     parsed = json.loads(args[0])
-        #                     if isinstance(parsed, dict):
-        #                         kwargs.update(parsed)
-        #                 except (json.JSONDecodeError, ValueError):
-        #                     print(f"Got an error, tool name: {tool_name}")
-        #                     # If not JSON, treat as a single parameter
-        #                     # For research_topic, assume it's the 'goal'
-        #                     if 'research_topic' in tool_name:
-        #                         kwargs['goal'] = args[0]
-        #                         print(f'kwargs of goal is: {kwargs['goal']}')
-        #                         if 'return_data' not in kwargs:
-        #                             kwargs['return_data'] = ['general_information']
-        #                     else:
-        #                         # For other endpoints, use as generic input
-        #                         kwargs['input'] = args[0]
-                
-        #         url = f"{self.base_url}{endpoint_path}"
-        #         method_upper = method.upper()
-        #         print(f"\nCalling up endpoint: {url}\nWith kwargs:{kwargs}\nWith Method:{method_upper}")
-
-        #         async with httpx.AsyncClient(timeout=150) as client:
-        #             if method_upper == "GET":
-        #                 response = await client.get(url, params=kwargs)
-        #             elif method_upper == "POST":
-        #                 response = await client.post(url, json=kwargs)
-        #             elif method_upper == "PUT":
-        #                 response = await client.put(url, json=kwargs)
-        #             elif method_upper == "DELETE":
-        #                 response = await client.delete(url, params=kwargs)
-        #             else:
-        #                 return f"Unsupported HTTP method: {method}"
-
-        #             if response.status_code == 200:
-        #                 try:
-        #                     return json.dumps(response.json(), indent=2)
-        #                 except Exception:
-        #                     return response.text
-        #             else:
-        #                 return f"API call failed: {response.status_code} - {response.text}"
-
-        #     except Exception as e:
-        #         return f"API error: {str(e)}"
-
-        # # But LangChain tools expect sync functions, so you need a wrapper:
-        # def sync_wrapper(*args, **kwargs):
-        #     return asyncio.run(async_api_tool_function(*args, **kwargs))
-        
-        # # The sync wrapper that LangChain will actually call
-        # def api_tool_function(*args, **kwargs) -> str:
-        #     return asyncio.run(async_api_tool_function(*args, **kwargs))
-        # end sync/async attempt #################
-        
-        
-        
-        ## exra parsing logic ###################
-
-        # def api_tool_function(*args, **kwargs) -> str:
-        #     try:
-        #         # Handle both positional and keyword arguments
-        #         # If we get positional args, try to parse as JSON or use as single param
-        #         if args:
-        #             if len(args) == 1 and isinstance(args[0], str):
-        #                 try:
-        #                     # Try to parse as JSON first
-        #                     print('Trying to parse as json...')
-        #                     parsed = json.loads(args[0])
-        #                     if isinstance(parsed, dict):
-        #                         kwargs.update(parsed)
-        #                 except (json.JSONDecodeError, ValueError):
-        #                     print(f"Got an error, tool name: {tool_name}")
-        #                     # If not JSON, treat as a single parameter
-        #                     # For research_topic, assume it's the 'goal'
-        #                     if 'research_topic' in tool_name:
-        #                         kwargs['goal'] = args[0]
-        #                         print(f'kwargs of goal is: {kwargs['goal']}')
-        #                         if 'return_data' not in kwargs:
-        #                             kwargs['return_data'] = ['general_information']
-        #                     else:
-        #                         # For other endpoints, use as generic input
-        #                         kwargs['input'] = args[0]
-                
-        #         url = f"{self.base_url}{endpoint_path}"
-        #         response = None
-        #         method_upper = method.upper()
-        #         print(f"\nCalling up endpoint: {url}\nWith kwargs:{kwargs}\nWith Method:{method_upper}")
-
-        #         if method_upper == "GET":
-        #             response = requests.get(url, params=kwargs, timeout=300)
-        #         elif method_upper == "POST":
-        #             response = requests.post(url, json=kwargs, timeout=300)
-        #         elif method_upper == "PUT":
-        #             response = requests.put(url, json=kwargs, timeout=300)
-        #         elif method_upper == "DELETE":
-        #             response = requests.delete(url, params=kwargs, timeout=300)
-        #         else:
-        #             return f"Unsupported HTTP method: {method}"
-
-        #         if response.status_code == 200:
-        #             try:
-        #                 return json.dumps(response.json(), indent=2)
-        #             except Exception:
-        #                 return response.text
-        #         else:
-        #             return f"API call failed: {response.status_code} - {response.text}"
-
-        #     except Exception as e:
-        #         return f"API error: {str(e)}"
-        ####################################
-        # Original ##############
-        # def api_tool_function(**kwargs) -> str:
-        #     try:
-        #         url = f"{self.base_url}{endpoint_path}"
-        #         response = None
-        #         method_upper = method.upper()
-
-        #         if method_upper == "GET":
-        #             response = requests.get(url, params=kwargs, timeout=30)
-        #         elif method_upper == "POST":
-        #             response = requests.post(url, json=kwargs, timeout=30)
-        #         elif method_upper == "PUT":
-        #             response = requests.put(url, json=kwargs, timeout=30)
-        #         elif method_upper == "DELETE":
-        #             response = requests.delete(url, params=kwargs, timeout=30)
-        #         else:
-        #             return f"Unsupported HTTP method: {method}"
-
-        #         if response.status_code == 200:
-        #             try:
-        #                 return json.dumps(response.json(), indent=2)
-        #             except Exception:
-        #                 return response.text
-        #         else:
-        #             return f"API call failed: {response.status_code} - {response.text}"
-
-        #     except Exception as e:
-        #         return f"API error: {str(e)}"
-        ######################
-        #######NEW ######
-        ################
         def api_tool_function(*args, **kwargs) -> str:
             def make_request():
                 try:
@@ -557,10 +425,10 @@ builder.register_api_endpoint_as_tool(
 # )
 
 @app.post("/create-agent", response_model=dict)
-async def create_agent(request: CreateAgentRequest):
+async def create_agent(request: CreateAgentRequest, user_token: str = Depends(get_user_token)):
     """Create a new agent with custom instructions"""
     try:
-        agent_name = request.agent_name or f"Agent-{len(agents_storage) + 1}"
+        agent_name = str(request.agent_name + user_token) or f"Agent-{len(agents_storage) + 1}"
         agent_id, agent_executor = builder.create_agent(
             instructions=request.instructions,
             agent_name=agent_name
@@ -585,13 +453,14 @@ async def create_agent(request: CreateAgentRequest):
         raise HTTPException(status_code=500, detail=f"Failed to create agent: {str(e)}")
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat_with_agent(request: ChatRequest):
+async def chat_with_agent(request: ChatRequest, user_token: str = Depends(get_user_token)):
     """Send a message to a specific agent"""
-    if request.agent_id not in agents_storage:
+    agent_id_plus = request.agent_id + user_token
+    if agent_id_plus not in agents_storage:
         raise HTTPException(status_code=404, detail="Agent not found")
     
     try:
-        agent_info = agents_storage[request.agent_id]
+        agent_info = agents_storage[agent_id_plus]
         agent_executor = agent_info["agent_executor"]
         
         # Get response from agent
@@ -600,7 +469,7 @@ async def chat_with_agent(request: ChatRequest):
         })
         
         return ChatResponse(
-            agent_id=request.agent_id,
+            agent_id=agent_id_plus,
             response=response["output"],
             conversation_id=None  # Could implement conversation tracking
         )
@@ -609,7 +478,7 @@ async def chat_with_agent(request: ChatRequest):
         raise HTTPException(status_code=500, detail=f"Failed to process message: {str(e)}")
 
 @app.get("/agents", response_model=List[AgentInfo])
-async def list_agents():
+async def list_agents(user_token: str = Depends(get_user_token)):
     """List all created agents"""
     agents = []
     for agent_id, info in agents_storage.items():
@@ -622,7 +491,7 @@ async def list_agents():
     return agents
 
 @app.get("/agents/{agent_id}", response_model=AgentInfo)
-async def get_agent(agent_id: str):
+async def get_agent(agent_id: str,user_token: str = Depends(get_user_token)):
     """Get information about a specific agent"""
     if agent_id not in agents_storage:
         raise HTTPException(status_code=404, detail="Agent not found")
@@ -636,7 +505,7 @@ async def get_agent(agent_id: str):
     )
 
 @app.delete("/agents/{agent_id}")
-async def delete_agent(agent_id: str):
+async def delete_agent(agent_id: str,user_token: str = Depends(get_user_token)):
     """Delete a specific agent"""
     if agent_id not in agents_storage:
         raise HTTPException(status_code=404, detail="Agent not found")
@@ -645,7 +514,7 @@ async def delete_agent(agent_id: str):
     return {"message": "Agent deleted successfully"}
 
 @app.get("/tools")
-async def list_available_tools():
+async def list_available_tools(user_token: str = Depends(get_user_token)):
     """List all available tools that agents can use"""
     tools_info = []
     
@@ -671,7 +540,7 @@ async def list_available_tools():
     }
 
 @app.post("/register-tool")
-async def register_new_tool(request: dict):
+async def register_new_tool(request: dict,user_token: str = Depends(get_user_token)):
     """Register a new API endpoint as a tool"""
     try:
         required_fields = ["endpoint_path", "method", "description"]
@@ -693,14 +562,14 @@ async def register_new_tool(request: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to register tool: {str(e)}")
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "agents_count": len(agents_storage)}
+# @app.get("/health")
+# async def health_check():
+#     """Health check endpoint"""
+#     return {"status": "healthy", "agents_count": len(agents_storage)}
 
 # Example usage and testing endpoints
 @app.get("/chatbot_instructions")
-async def root():
+async def root(user_token: str = Depends(get_user_token)):
     """API documentation and examples"""
     return {
         "message": "Simplified Agent Service",
@@ -812,7 +681,7 @@ async def root():
 
 
 @app.post("/research_topic", response_model=ResearchTopicResponse)
-async def research_topic(request: ResearchTopicRequest):
+async def research_topic(request: ResearchTopicRequest,user_token: str = Depends(get_user_token)):
     """
     Start a research task using Skyvern API
     
@@ -889,7 +758,7 @@ async def research_topic(request: ResearchTopicRequest):
         )
 
 @app.get("/research_status/{task_id}", response_model=ResearchTopicResponse)
-async def get_research_status(task_id: str):
+async def get_research_status(task_id: str, user_token: str = Depends(get_user_token)):
     """
     Check the status of a research task
     
@@ -947,7 +816,7 @@ async def get_research_status(task_id: str):
     )
 
 @app.post("/webhook/skyvern/{task_id}")
-async def skyvern_webhook(task_id: str, payload: WebhookPayload):
+async def skyvern_webhook(task_id: str, payload: WebhookPayload, user_token: str = Depends(get_user_token)):
     """
     Webhook endpoint to receive Skyvern task completion results
     
@@ -979,7 +848,7 @@ async def skyvern_webhook(task_id: str, payload: WebhookPayload):
     }
 
 @app.get("/tasks/pending")
-async def list_pending_tasks():
+async def list_pending_tasks(user_token: str = Depends(get_user_token)):
     """
     List all currently pending tasks (useful for debugging)
     """
@@ -997,7 +866,7 @@ async def list_pending_tasks():
     }
 
 @app.get("/tasks/completed")
-async def list_completed_tasks():
+async def list_completed_tasks(user_token: str = Depends(get_user_token)):
     """
     List recently completed tasks (useful for debugging)
     """
@@ -1016,7 +885,7 @@ async def list_completed_tasks():
     }
 
 @app.delete("/tasks/{task_id}")
-async def delete_task(task_id: str):
+async def delete_task(task_id: str, user_token: str = Depends(get_user_token)):
     """
     Delete a task from memory (cleanup)
     """
@@ -1313,13 +1182,13 @@ async def call_openai_api(prompt: str, output_keys: List[str]) -> Dict[str, Any]
 
 # API Endpoints
 @app.post("/input_data")
-async def input_data(request: InputDataRequest):
+async def input_data(request: InputDataRequest, user_token: str = Depends(get_user_token)):
     """
     Process input data and store in MongoDB
     """
     try:
         # Get or create the target object
-        await get_or_create_object(request.created_object_name)
+        await get_or_create_object(request.created_object_name + user_token)
         
         processed_count = 0
         
@@ -1341,13 +1210,13 @@ async def input_data(request: InputDataRequest):
             
             # Add to database
             await add_data_entry(
-                object_name=request.created_object_name,
+                object_name=request.created_object_name + user_token,
                 key_list=[entry_uuid],
                 value=text_content
             )
             
             processed_count += 1
-        
+        # NOTE: We aren't returning the user token here, the created app thinks object_name is the thing to use.
         return JSONResponse(
             content={
                 "message": f"Successfully processed {processed_count} items",
@@ -1359,7 +1228,7 @@ async def input_data(request: InputDataRequest):
         raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
 
 @app.post("/apply_prompt")
-async def apply_prompt(request: ApplyPromptRequest):
+async def apply_prompt(request: ApplyPromptRequest, user_token: str = Depends(get_user_token)):
     """
     Apply prompts to data combinations and generate new objects
     """
@@ -1367,15 +1236,15 @@ async def apply_prompt(request: ApplyPromptRequest):
         # Step 1: Get all input objects from database
         input_objects = {}
         for input_spec in request.inputs:
-            obj = await collection.find_one({"object_name": input_spec.input_object_name})
+            obj = await collection.find_one({"object_name": input_spec.input_object_name + user_token})
             if not obj:
-                raise HTTPException(status_code=404, detail=f"Object {input_spec.input_object_name} not found")
-            input_objects[input_spec.input_object_name] = obj
+                raise HTTPException(status_code=404, detail=f"Object {input_spec.input_object_name + user_token} not found")
+            input_objects[input_spec.input_object_name + user_token] = obj
         
         # Step 2: Process each input according to its mode
         processed_inputs = {}
         for input_spec in request.inputs:
-            obj_data = input_objects[input_spec.input_object_name]
+            obj_data = input_objects[input_spec.input_object_name + user_token]
             # Ensure this fits the formula - one string as value for each input.
             for i in range(len(obj_data["data"])):
                 obj_data["data"][i]["value"] = str(obj_data["data"][i]["value"])
@@ -1384,15 +1253,15 @@ async def apply_prompt(request: ApplyPromptRequest):
             if input_spec.mode == "combine_events":
                 # Combine all entries into one
                 combined = combine_events(data_entries)
-                processed_inputs[input_spec.input_object_name] = [combined]
+                processed_inputs[input_spec.input_object_name + user_token] = [combined]
             else:
                 # Keep individual entries
-                processed_inputs[input_spec.input_object_name] = data_entries
+                processed_inputs[input_spec.input_object_name + user_token] = data_entries
         
         # Step 3: Generate combinations based on modes
         combinations = []
         input_names = list(processed_inputs.keys())
-        input_specs_by_name = {spec.input_object_name: spec for spec in request.inputs}
+        input_specs_by_name = {spec.input_object_name + user_token: spec for spec in request.inputs}
         
         if len(input_names) == 1:
             # Single input case
@@ -1449,7 +1318,7 @@ async def apply_prompt(request: ApplyPromptRequest):
                 all_keys.extend(data_entry.key_list)
             
             # Call OpenAI API
-            openai_result = await call_openai_api(filled_prompt, request.created_object_names)
+            openai_result = await call_openai_api(filled_prompt, request.created_object_names + user_token)
             
             # Step 5: Store results
             unique_keys = list(set(all_keys))
@@ -1458,19 +1327,21 @@ async def apply_prompt(request: ApplyPromptRequest):
             
             for obj_name in request.created_object_names:
                 if obj_name in openai_result:
+                    obj_name_plus = obj_name + user_token
                     # Ensure target object exists
-                    await get_or_create_object(obj_name)
+                    await get_or_create_object(obj_name_plus)
                     
                     # Add the result
                     await add_data_entry(
-                        object_name=obj_name,
+                        object_name=obj_name_plus,
                         key_list=final_keys,
                         # value=str(openai_result[obj_name])
-                        value=openai_result[obj_name]
+                        value=openai_result[obj_name_plus]
                     )
             
             results_processed += 1
         
+        # Note we aren't sending the user_token part of the created_object_names back.
         return JSONResponse(
             content={
                 "message": f"Successfully processed {results_processed} combinations",
@@ -1483,9 +1354,9 @@ async def apply_prompt(request: ApplyPromptRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/objects/{object_name}")
-async def get_object(object_name: str):
+async def get_object(object_name: str, user_token: str = Depends(get_user_token)):
     """Get an object by name"""
-    obj = await collection.find_one({"object_name": object_name})
+    obj = await collection.find_one({"object_name": object_name + user_token})
     if not obj:
         raise HTTPException(status_code=404, detail="Object not found")
     
@@ -1495,16 +1366,16 @@ async def get_object(object_name: str):
 
 
 @app.get("/return_data/{object_name}")
-async def return_data(object_name: str):
+async def return_data(object_name: str, user_token: str = Depends(get_user_token)):
     """
     Return an object plus all related objects that share at least one key.
     This finds objects with data entries that have overlapping key_list values.
     """
     try:
         # Get the primary object
-        primary_obj = await collection.find_one({"object_name": object_name})
+        primary_obj = await collection.find_one({"object_name": object_name + user_token})
         if not primary_obj:
-            raise HTTPException(status_code=404, detail=f"Object '{object_name}' not found")
+            raise HTTPException(status_code=404, detail=f"Object '{object_name + user_token}' not found")
         
         # Extract all keys from the primary object
         primary_keys = set()
@@ -1534,7 +1405,7 @@ async def return_data(object_name: str):
         shared_keys_summary = []
         
         # Get all objects except the primary one
-        cursor = collection.find({"object_name": {"$ne": object_name}})
+        cursor = collection.find({"object_name": {"$ne": object_name + user_token}})
         all_other_objects = await cursor.to_list(length=None)
         
         for obj in all_other_objects:
@@ -1596,18 +1467,18 @@ async def return_data(object_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.get("/objects")
-async def list_objects():
-    """List all objects"""
-    cursor = collection.find({}, {"_id": 0})
-    objects = await cursor.to_list(length=None)
-    return {"objects": [obj["object_name"] for obj in objects]}
+# should be jsut for debug
+# @app.get("/objects")
+# async def list_objects():
+#     """List all objects"""
+#     cursor = collection.find({}, {"_id": 0})
+#     objects = await cursor.to_list(length=None)
+#     return {"objects": [obj["object_name"] for obj in objects]}
 
 @app.delete("/objects/{object_name}")
-async def delete_object(object_name: str):
+async def delete_object(object_name: str,user_token: str = Depends(get_user_token)):
     """Delete an object"""
-    result = await collection.delete_one({"object_name": object_name})
+    result = await collection.delete_one({"object_name": object_name + user_token})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Object not found")
     return {"message": f"Object {object_name} deleted successfully"}
