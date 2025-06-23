@@ -444,7 +444,7 @@ async def create_agent(request: CreateAgentRequest, user_token: str = Depends(ge
         
         return {
             "agent_id": agent_id,
-            "agent_name": agent_name,
+            "agent_name": request.agent_name,
             "message": "Agent created successfully",
             "instructions": request.instructions
         }
