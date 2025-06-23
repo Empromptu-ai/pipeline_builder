@@ -6,7 +6,7 @@ import SwitchableStream from '~/lib/.server/llm/switchable-stream';
 import { streamText as _streamText, convertToCoreMessages } from 'ai';
 import { getAPIKey } from '~/lib/.server/llm/api-key';
 import { getAnthropicModel } from '~/lib/.server/llm/model';
-import { generateSessionId } from '~/utils/sessionId';
+// import { generateSessionId } from '~/utils/sessionId';
 
 const estimateTokens = (text: string): number => {
   // Rough estimation: ~4 characters per token for English text
@@ -81,8 +81,8 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
   const { messages } = await request.json<{ messages: Messages }>();
 
   // Generate a unique session ID for this conversation
-  const sessionId = generateSessionId();
-  console.log(`Generated session ID: ${sessionId}`);
+  // const sessionId = generateSessionId();
+  // console.log(`Generated session ID: ${sessionId}`);
 
   // NEW:  Also we changed "messages" to "managedMessages" after this
   const managedMessages = manageContextWindow(messages, 180000);
@@ -239,7 +239,7 @@ function streamTextWithYourAgent(messages: Messages, env: Env, options?: Streami
 
 function getYourAgentSystemPrompt(): string {
   // return API_CHATBOT_PROMPT;
-  return API_CHATBOT_PROMPT(sessionId);
+  return API_CHATBOT_PROMPT; //(sessionId);
 }
 
 function checkIfAlreadyTransitioned(messages: Messages): boolean {
@@ -270,13 +270,13 @@ function checkIfShouldTransition(responseText: string): boolean {
 
 function injectSinglePrompt(messages: Messages, promptNumber: 1 | 2): Messages {
   const injectedMessages = [...messages];
-  console.log(`Injecting prompt ${promptNumber} into messages for session ${sessionId}`);
+  console.log(`Injecting prompt ${promptNumber} into messages`);
   
   if (promptNumber === 1) {
     injectedMessages.push({ 
       role: 'user' as const, 
       // content:  INJECTED_PROMPT_1 //'[INJECTED_PROMPT_1] Please review the API spec and be absolutely sure that you are calling those functions with the appropriate data formats, for example ensuring that you are sending object_name values, encapsulating input correctly in json, and using the exact function endpoints as they were defined.' 
-      content:  INJECTED_PROMPT_1(sessionId) //
+      content:  INJECTED_PROMPT_1   // (sessionId) //
     });
   } else {
     injectedMessages.push({ 
