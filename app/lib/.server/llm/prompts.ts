@@ -4,8 +4,15 @@ import { stripIndents } from '~/utils/stripIndent';
 
 // Apparently we can't do this, so.....at least remember to add the username/ID later when we have it.
 // import { description } from '~/lib/persistence/useChatHistory'; // Description of the webcontainer, including project name
+// For now, the user/session info will be the following:
+// a random UID/hex bytes (should be distincy by session, just to avoid collision)
+// The userId ('sean' for now as demo until the RBAC system is added)
+// The string will be in the format:
+// <userId>__-__<UID>
+
 import { randomBytes } from 'crypto';
-const description = randomBytes(8).toString('hex');
+// const description = randomBytes(8).toString('hex') + `__-__` + `sean`;
+import { description } from '~/lib/persistence/useChatHistory'
 
 export const getSystemPrompt = (cwd: string = WORK_DIR) => `
 You are Bolt, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices.
@@ -234,7 +241,9 @@ export const CONTINUE_PROMPT = stripIndents`
 
 
 //export const API_CHATBOT_PROMPT = (description: string = '') => stripIndents`
-export const API_CHATBOT_PROMPT = stripIndents`
+export const API_CHATBOT_PROMPT = () => {
+  const currentDescription = description.get() + `__-__` + `sean`; // Get current value
+  return stripIndents`
 You are an AI assistant that helps users solve problems using a powerful data pipeline API system. This system allows you to ingest data from multiple sources, process it with custom prompts, and create derived data objects for complex workflows.
 Your task:
   1. The user wants your help putting functions together to create an app that does some task and then returns results to them. 
@@ -242,7 +251,7 @@ Your task:
   3. When you are fully confident you can answer, respond with a simple React/javascript code snippet that will allow the needed inputs and outputs, to be embedded into a larger app.
 Only do this once when you know everything you need to, and include a plan using just the functions defined here as well as a simple description.
 
-## Available API Endpoints (all API endpoints are at https://builder.impromptu-labs.com/api_tools, and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}")
+## Available API Endpoints (all API endpoints are at https://builder.impromptu-labs.com/api_tools, and calls must include an HTTP header named Authorization. with the value "Bearer ${currentDescription || ''}")
 ### 1. Data Ingestion: '/input_data'
 **Purpose**: Import data from strings, files, or URLs into the system
 **Method**: POST
@@ -486,8 +495,8 @@ As an AI assistant using this system:
 5. **Suggest follow-up steps** or alternative approaches when helpful
 
 Remember: When you are confident you can write a working code snippet to accomplish the user's needs, return the token "[final]: " followed by the code and a brief description of what the code will accomplish, formatted as a request to compile this code.
-`
-
+`;
+}
 
 
 
@@ -509,7 +518,11 @@ Remember: When you are confident you can write a working code snippet to accompl
 // export const INJECTED_PROMPT_1 = stripIndents`[INJECTED_PROMPT_1]
 // export const INJECTED_PROMPT_1 = (description: string = '') => stripIndents`[INJECTED_PROMPT_1]
 
-export const INJECTED_PROMPT_1 = stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:
+
+
+export const INJECTED_PROMPT_1 = () => {
+ const currentDescription = description.get() + `__-__` + `sean`; // Get current value
+ return stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:
 
 (For screens where users upload documents, extract structured data, and view outputs):
 Generate a three-step Upload & Extract flow for seed-to-Series-B small-business brands.
@@ -539,7 +552,7 @@ Be sure that user-input windows are declared outside of main event loops to avoi
 Please ensure that all text and windows have good contrast against their background.
 
 Also please review the API spec and be absolutely sure that you are calling those functions with the appropriate data formats, for example ensuring that you are sending object_name values, encapsulating input correctly in json, and using the exact function endpoints as they were defined.
-As a reminder, all API endpoints are at https://builder.impromptu-labs.com/api_tools ,  and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}".
+As a reminder, all API endpoints are at https://builder.impromptu-labs.com/api_tools ,  and calls must include an HTTP header named Authorization. with the value "Bearer ${currentDescription || ''}".
 
 And remember the actual API functions you have access to, and what they expect:
 
@@ -590,6 +603,8 @@ Also, please add a green button to show the raw API input/output results, and a 
 
 Please also echo the exact API calls to the screen for debugging as they happen.
 `;
+}
+
 // Remember to re-install and run npm run dev (using <boltAction type="shell"> ) after any changes.
 // Remember, do not build or run the software yet.
 // Please make sure that any research calls are properly constructed, with a call to research_topic and then a polling pattern using /research_status/{task_id} periodically until an answer is returned.

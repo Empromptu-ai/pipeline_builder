@@ -61,10 +61,12 @@ load_dotenv()
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 DATABASE_NAME = "pipeline_db"
 COLLECTION_NAME = "data_objects"
+PROMPT_COLLECTION_NAME = "prompts"
 
 client = AsyncIOMotorClient(MONGODB_URL)
 db = client[DATABASE_NAME]
 collection = db[COLLECTION_NAME]
+prompt_collection = db[PROMPT_COLLECTION_NAME]
 
 # OpenAI client - set your API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -100,6 +102,15 @@ async def get_user_token(authorization: Optional[str] = Header(None)) -> str:
     
     return token
 
+# Parse the user token to get the pieces from it (userId, session UID, password?, user_api_key?)
+async def parse_user_tokens(description):
+    try:
+        split_tokens = description.split('__-__')
+        userId = split_tokens[0]
+        UID = split_tokens[1]
+        return userId, UID
+    return None, None
+    
 # Pydantic models
 class DataEntry(BaseModel):
     key_list: List[str]
@@ -562,34 +573,31 @@ async def register_new_tool(request: dict,user_token: str = Depends(get_user_tok
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to register tool: {str(e)}")
 
-# @app.get("/health")
-# async def health_check():
-#     """Health check endpoint"""
-#     return {"status": "healthy", "agents_count": len(agents_storage)}
 
 # Example usage and testing endpoints
-@app.get("/chatbot_instructions")
-async def root(user_token: str = Depends(get_user_token)):
-    """API documentation and examples"""
-    return {
-        "message": "Simplified Agent Service",
-        "usage": {
-            "create_agent": "POST /create-agent with {'instructions': 'Your instructions here'}",
-            "chat": "POST /chat with {'agent_id': 'agent_id', 'message': 'Your message'}",
-            "list_agents": "GET /agents",
-            "delete_agent": "DELETE /agents/{agent_id}"
-        },
-        "example": {
-            "create_agent": {
-                "instructions": "You are a helpful customer service agent for a tech company. Be friendly and professional.",
-                "agent_name": "Customer Service Bot"
-            },
-            "chat": {
-                "agent_id": "your-agent-id-here",
-                "message": "Hello, how can you help me today?"
-            }
-        }
-    }
+# @app.get("/chatbot_instructions")
+# async def root(user_token: str = Depends(get_user_token)):
+#     """API documentation and examples"""
+#     return {
+#         "message": "Simplified Agent Service",
+#         "usage": {
+#             "create_agent": "POST /create-agent with {'instructions': 'Your instructions here'}",
+#             "chat": "POST /chat with {'agent_id': 'agent_id', 'message': 'Your message'}",
+#             "list_agents": "GET /agents",
+#             "delete_agent": "DELETE /agents/{agent_id}"
+#         },
+#         "example": {
+#             "create_agent": {
+#                 "instructions": "You are a helpful customer service agent for a tech company. Be friendly and professional.",
+#                 "agent_name": "Customer Service Bot"
+#             },
+#             "chat": {
+#                 "agent_id": "your-agent-id-here",
+#                 "message": "Hello, how can you help me today?"
+#             }
+#         }
+#     }
+    
 ### END CHATBOT STUFF
 
 ### BEGIN Browser use/Skyvern Stuff

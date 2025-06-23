@@ -3,6 +3,7 @@
 # Set your database and collection names
 DATABASE_NAME="pipeline_db"
 COLLECTION_NAME="data_objects"
+PROMPTS_COLLECTION="prompts"
 
 echo "Updating package list..."
 sudo apt-get update
@@ -36,6 +37,7 @@ echo "Creating database '$DATABASE_NAME' and collection '$COLLECTION_NAME'..."
 mongosh <<EOF
 use $DATABASE_NAME
 db.createCollection("$COLLECTION_NAME")
+db.createCollection("$PROMPTS_COLLECTION")
 EOF
 
 echo "MongoDB is running at mongodb://localhost:27017"
