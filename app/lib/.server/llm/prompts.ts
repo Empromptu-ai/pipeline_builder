@@ -242,7 +242,7 @@ export const CONTINUE_PROMPT = stripIndents`
 
 //export const API_CHATBOT_PROMPT = (description: string = '') => stripIndents`
 export const API_CHATBOT_PROMPT = () => {
-  console.log('APIChatbotPrompt called on:', typeof window !== 'undefined' ? 'CLIENT' : 'SERVER');
+  // console.log('APIChatbotPrompt called on:', typeof window !== 'undefined' ? 'CLIENT' : 'SERVER');
   const currentDescription = description + `__-__` + `sean`; // Get current value
   return stripIndents`
 You are an AI assistant that helps users solve problems using a powerful data pipeline API system. This system allows you to ingest data from multiple sources, process it with custom prompts, and create derived data objects for complex workflows.
