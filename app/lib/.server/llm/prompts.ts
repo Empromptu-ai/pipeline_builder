@@ -11,8 +11,8 @@ import { stripIndents } from '~/utils/stripIndent';
 // <userId>__-__<UID>
 
 import { randomBytes } from 'crypto';
-// const description = randomBytes(8).toString('hex') + `__-__` + `sean`;
-import { description } from '~/lib/persistence/useChatHistory'
+const description = randomBytes(8).toString('hex') + `__-__` + `sean`;
+// import { description } from '~/lib/persistence/useChatHistory'
 
 export const getSystemPrompt = (cwd: string = WORK_DIR) => `
 You are Bolt, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices.
@@ -242,7 +242,8 @@ export const CONTINUE_PROMPT = stripIndents`
 
 //export const API_CHATBOT_PROMPT = (description: string = '') => stripIndents`
 export const API_CHATBOT_PROMPT = () => {
-  const currentDescription = description.get() + `__-__` + `sean`; // Get current value
+  console.log('APIChatbotPrompt called on:', typeof window !== 'undefined' ? 'CLIENT' : 'SERVER');
+  const currentDescription = description + `__-__` + `sean`; // Get current value
   return stripIndents`
 You are an AI assistant that helps users solve problems using a powerful data pipeline API system. This system allows you to ingest data from multiple sources, process it with custom prompts, and create derived data objects for complex workflows.
 Your task:
@@ -521,7 +522,7 @@ Remember: When you are confident you can write a working code snippet to accompl
 
 
 export const INJECTED_PROMPT_1 = () => {
- const currentDescription = description.get() + `__-__` + `sean`; // Get current value
+ const currentDescription = description + `__-__` + `sean`; // Get current value
  return stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:
 
 (For screens where users upload documents, extract structured data, and view outputs):
