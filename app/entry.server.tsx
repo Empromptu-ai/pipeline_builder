@@ -77,7 +77,8 @@ export default async function handleRequest(
   csp += "script-src 'self' 'unsafe-inline' 'unsafe-eval'; ";
   csp += "style-src 'self' 'unsafe-inline'; ";
   csp += "img-src 'self' data: https:; ";
-  csp += "connect-src 'self' https:; ";
+  // csp += "connect-src 'self' https:; ";
+  csp += "connect-src 'self' https: wss: ws:; ";
   csp += "font-src 'self' data:;";
 
   responseHeaders.set('Content-Security-Policy', csp);
