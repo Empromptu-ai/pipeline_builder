@@ -2,39 +2,8 @@ import { MODIFICATIONS_TAG_NAME, WORK_DIR } from '~/utils/constants';
 import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
 
+// Apparently we can't do this, so.....at least remember to add the username/ID later when we have it.
 // import { description } from '~/lib/persistence/useChatHistory'; // Description of the webcontainer, including project name
-
-
-// NEW TESTS
-import { useEffect, useState } from 'react';
-
-function YourComponent() {
-  const [description, setDescription] = useState<string | undefined>();
-
-  useEffect(() => {
-    // Dynamic import only runs on client-side, after hydration
-    import('~/lib/persistence/useChatHistory').then(({ description: descAtom }) => {
-      setDescription(descAtom.get());
-      
-      // Subscribe to changes if needed
-      const unsubscribe = descAtom.subscribe(setDescription);
-      return () => unsubscribe();
-    });
-  }, []);
-
-// END NEW TESTS
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 export const getSystemPrompt = (cwd: string = WORK_DIR) => `
@@ -262,7 +231,9 @@ export const CONTINUE_PROMPT = stripIndents`
   Do not repeat any content, including artifact and action tags.
 `;
 
-export const API_CHATBOT_PROMPT = stripIndents`
+// export const API_CHATBOT_PROMPT = stripIndents`
+
+export const API_CHATBOT_PROMPT = (description: string = '') => stripIndents`
 You are an AI assistant that helps users solve problems using a powerful data pipeline API system. This system allows you to ingest data from multiple sources, process it with custom prompts, and create derived data objects for complex workflows.
 Your task:
   1. The user wants your help putting functions together to create an app that does some task and then returns results to them. 
@@ -534,9 +505,10 @@ Remember: When you are confident you can write a working code snippet to accompl
 //   ] 
 // }
 // Note that each returned 'value' array is already in json/dict format and does not need to be parsed. Expect "data" and each "value" element to be a list, appropriate to the task. So get that value from something like result.data[0].value, casting it as a string.
+// export const INJECTED_PROMPT_1 = stripIndents`[INJECTED_PROMPT_1]
 
 
-export const INJECTED_PROMPT_1 = stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:
+export const INJECTED_PROMPT_1 = (description: string = '') => stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:
 
 (For screens where users upload documents, extract structured data, and view outputs):
 Generate a three-step Upload & Extract flow for seed-to-Series-B small-business brands.
