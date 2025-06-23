@@ -2,7 +2,40 @@ import { MODIFICATIONS_TAG_NAME, WORK_DIR } from '~/utils/constants';
 import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
 
-import { description } from '~/lib/persistence/useChatHistory'; // Description of the webcontainer, including project name
+// import { description } from '~/lib/persistence/useChatHistory'; // Description of the webcontainer, including project name
+
+
+// NEW TESTS
+import { useEffect, useState } from 'react';
+
+function YourComponent() {
+  const [description, setDescription] = useState<string | undefined>();
+
+  useEffect(() => {
+    // Dynamic import only runs on client-side, after hydration
+    import('~/lib/persistence/useChatHistory').then(({ description: descAtom }) => {
+      setDescription(descAtom.get());
+      
+      // Subscribe to changes if needed
+      const unsubscribe = descAtom.subscribe(setDescription);
+      return () => unsubscribe();
+    });
+  }, []);
+
+// END NEW TESTS
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const getSystemPrompt = (cwd: string = WORK_DIR) => `
 You are Bolt, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices.
@@ -237,7 +270,7 @@ Your task:
   3. When you are fully confident you can answer, respond with a simple React/javascript code snippet that will allow the needed inputs and outputs, to be embedded into a larger app.
 Only do this once when you know everything you need to, and include a plan using just the functions defined here as well as a simple description.
 
-## Available API Endpoints (all API endpoints are at https://builder.impromptu-labs.com/api_tools, and calls must include an HTTP header named Authorization. with the value "Bearer ${description.get() || ''}")
+## Available API Endpoints (all API endpoints are at https://builder.impromptu-labs.com/api_tools, and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}")
 ### 1. Data Ingestion: '/input_data'
 **Purpose**: Import data from strings, files, or URLs into the system
 **Method**: POST
@@ -533,7 +566,7 @@ Be sure that user-input windows are declared outside of main event loops to avoi
 Please ensure that all text and windows have good contrast against their background.
 
 Also please review the API spec and be absolutely sure that you are calling those functions with the appropriate data formats, for example ensuring that you are sending object_name values, encapsulating input correctly in json, and using the exact function endpoints as they were defined.
-As a reminder, all API endpoints are at https://builder.impromptu-labs.com/api_tools ,  and calls must include an HTTP header named Authorization. with the value "Bearer ${description.get() || ''}".
+As a reminder, all API endpoints are at https://builder.impromptu-labs.com/api_tools ,  and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}".
 
 And remember the actual API functions you have access to, and what they expect:
 
