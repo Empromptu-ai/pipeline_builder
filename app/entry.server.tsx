@@ -75,11 +75,13 @@ export default async function handleRequest(
   let csp = "default-src 'self'; ";
   csp += "frame-src 'self' https://analytics.impromptu-labs.com https://example.com https:; ";
   csp += "script-src 'self' 'unsafe-inline' 'unsafe-eval'; ";
-  csp += "style-src 'self' 'unsafe-inline'; ";
+  // csp += "style-src 'self' 'unsafe-inline'; ";
+  csp += "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; ";
   csp += "img-src 'self' data: https:; ";
   // csp += "connect-src 'self' https:; ";
   csp += "connect-src 'self' https: wss: ws:; ";
-  csp += "font-src 'self' data:;";
+  // csp += "font-src 'self' data:;";
+  csp += "font-src 'self' data: https://fonts.gstatic.com;";
 
   responseHeaders.set('Content-Security-Policy', csp);
   // responseHeaders.set('Cross-Origin-Embedder-Policy', 'unsafe-none');
