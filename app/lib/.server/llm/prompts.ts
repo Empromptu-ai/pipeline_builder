@@ -2,18 +2,10 @@ import { MODIFICATIONS_TAG_NAME, WORK_DIR } from '~/utils/constants';
 import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
 
-export const getCurrentURL = () => window.location.href;
+// Apparently we can'tdo this:
+// export const getCurrentURL = () => window.location.href;
 
-// Console log examples to show what this captures:
-console.log('Full URL:', getCurrentURL());
-console.log('Just the pathname:', window.location.pathname);
-console.log('Origin (protocol + host):', window.location.origin);
-console.log('Host:', window.location.host);
-console.log('Protocol:', window.location.protocol);
-console.log('Search params:', window.location.search);
-console.log('Hash:', window.location.hash);
-
-// Apparently we can't do this, so.....at least remember to add the username/ID later when we have it.
+// Apparently we can't do this wither, so.....at least remember to add the username/ID later when we have it.
 // import { description } from '~/lib/persistence/useChatHistory'; // Description of the webcontainer, including project name
 // For now, the user/session info will be the following:
 // a random UID/hex bytes (should be distincy by session, just to avoid collision)
@@ -21,9 +13,15 @@ console.log('Hash:', window.location.hash);
 // The string will be in the format:
 // <userId>__-__<UID>
 
-import { randomBytes } from 'crypto';
-const description = randomBytes(8).toString('hex') + `__-__` + `sean`;
+// Apparently we can't do this either, one context is server-side and the other is client-side
 // import { description } from '~/lib/persistence/useChatHistory'
+
+
+import { randomBytes } from 'crypto';
+// TODO: I don't think the URL OR the session "description" can be gotten from here, regardless of technique - the react infrastructure is really a trashfire.  
+// So for now , we're just keeping a UID, plus user credentials.  Make sure to add the real credentials!
+const description = randomBytes(8).toString('hex') + `__-__` + `sean`;
+
 
 export const getSystemPrompt = (cwd: string = WORK_DIR) => `
 You are Bolt, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices.
@@ -259,13 +257,13 @@ export const CONTINUE_PROMPT = stripIndents`
 
 
 // export const INJECTED_PROMPT_2 = stripIndents`[INJECTED_PROMPT_2] 
-console.log('Full URL:', getCurrentURL());
-console.log('Just the pathname:', window.location.pathname);
-console.log('Origin (protocol + host):', window.location.origin);
-console.log('Host:', window.location.host);
-console.log('Protocol:', window.location.protocol);
-console.log('Search params:', window.location.search);
-console.log('Hash:', window.location.hash);
+// console.log('Full URL:', getCurrentURL());
+// console.log('Just the pathname:', window.location.pathname);
+// console.log('Origin (protocol + host):', window.location.origin);
+// console.log('Host:', window.location.host);
+// console.log('Protocol:', window.location.protocol);
+// console.log('Search params:', window.location.search);
+// console.log('Hash:', window.location.hash);
 
 export const API_CHATBOT_PROMPT = stripIndents`
 You are an AI assistant that helps users solve problems using a powerful data pipeline API system. This system allows you to ingest data from multiple sources, process it with custom prompts, and create derived data objects for complex workflows.
@@ -393,7 +391,7 @@ Use the task ID to check periodically until the status changes from "pending" to
 Recommended polling pattern:
 Wait 30 seconds after starting the task
 Then check every 15-30 seconds
-Tasks typically complete within 2-10 minutes
+Tasks typically complete within 15-20 minutes
 When status is "completed", the output_data field will contain your research results. Expect to wait for these results.
 
 Response (Pending):
@@ -615,7 +613,7 @@ Talk to an existing agent: POST /chat: Continue the conversation with an agent
 
 Begin Researching a topic: POST /research_topic .  Begin Researching a topic using an online browser to find information through web search.
 
-Check and get research task status:  GET /research_status/{task_id} .  Check this every 15 or 30 seconds until the result is ready. When status is "completed", the output_data field will contain your research results. Expect to wait for these results.
+Check and get research task status:  GET /research_status/{task_id} .  Check this every 15 or 30 seconds until the result is ready. When status is "completed", the output_data field will contain your research results. Expect to wait a while for these results.
 
 
 Ensure that the necessary input and output controls are present to allow the user to run this code, sending in what they need to at the time.

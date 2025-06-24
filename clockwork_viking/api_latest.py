@@ -103,12 +103,22 @@ async def get_user_token(authorization: Optional[str] = Header(None)) -> str:
     return token
 
 # Parse the user token to get the pieces from it (userId, session UID, password?, user_api_key?)
-async def parse_user_tokens(description):
+# And we also want to do one of the following:
+# - If there is already a prompt with this same userId and prompt_text, then do not make another
+# - If there is not, then create one and the local record. (use UID for project_id, username, prompt_text, and standard evals for now) 
+# TODO:  Also read in user API KEY from the prompts text (default to sean for now).
+# TODO:  make new Empromptu project with the UID for project_id, and user API key.  If it's the first time we've seen this UID, make new project,
+#        then if it's the first time we've seen this prompt_text for this UID, make a a new task with prompt_text, task_name as an LLM-powered summary of the task, etc.
+#        and in either case, keep a local record of what we did (in the DB colletion 'prompts').
+# TODO:  send back UID, userId, user_api_key, whether we made a new project or task or what, etc.
+# TODO:  change the use_prompt function to use the EMP2 distributable, with the stuff returned from this function
+# TODO:  Test that a new project comes with new prompts and that they're instrumented.
+async def check_prompt_and_tokens(description, prompt_text):
     try:
         split_tokens = description.split('__-__')
-        userId = split_tokens[0]
-        UID = split_tokens[1]
-        return userId, UID
+        session_UID = split_tokens[0]
+        userId = split_tokens[1]
+        return UID, userId
     except Exception as e:
         return None, None
     
