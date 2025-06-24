@@ -1337,7 +1337,7 @@ async def apply_prompt(request: ApplyPromptRequest, user_token: str = Depends(ge
                 all_keys.extend(data_entry.key_list)
             
             # Call OpenAI API
-            openai_result = await call_openai_api(filled_prompt, request.created_object_names + user_token)
+            openai_result = await call_openai_api(filled_prompt, request.created_object_names) #  + user_token)
             
             # Step 5: Store results
             unique_keys = list(set(all_keys))
