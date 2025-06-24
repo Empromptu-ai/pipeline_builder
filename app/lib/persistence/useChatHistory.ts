@@ -81,9 +81,9 @@ export function useChatHistory() {
         description.set(firstArtifact?.title);
 
         // NEW - Also add to URL - 
-        const url = new URL(window.location.href);
-        url.searchParams.set('desc', firstArtifact.title);
-        window.history.replaceState({}, '', url);
+        // const url = new URL(window.location.href);
+        // url.searchParams.set('desc', firstArtifact.title);
+        // window.history.replaceState({}, '', url);
       }
 
       if (initialMessages.length === 0 && !chatId.get()) {
