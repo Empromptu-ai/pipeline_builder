@@ -2,6 +2,17 @@ import { MODIFICATIONS_TAG_NAME, WORK_DIR } from '~/utils/constants';
 import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
 
+export const getCurrentURL = () => window.location.href;
+
+// Console log examples to show what this captures:
+console.log('Full URL:', getCurrentURL());
+console.log('Just the pathname:', window.location.pathname);
+console.log('Origin (protocol + host):', window.location.origin);
+console.log('Host:', window.location.host);
+console.log('Protocol:', window.location.protocol);
+console.log('Search params:', window.location.search);
+console.log('Hash:', window.location.hash);
+
 // Apparently we can't do this, so.....at least remember to add the username/ID later when we have it.
 // import { description } from '~/lib/persistence/useChatHistory'; // Description of the webcontainer, including project name
 // For now, the user/session info will be the following:
@@ -248,6 +259,13 @@ export const CONTINUE_PROMPT = stripIndents`
 
 
 // export const INJECTED_PROMPT_2 = stripIndents`[INJECTED_PROMPT_2] 
+console.log('Full URL:', getCurrentURL());
+console.log('Just the pathname:', window.location.pathname);
+console.log('Origin (protocol + host):', window.location.origin);
+console.log('Host:', window.location.host);
+console.log('Protocol:', window.location.protocol);
+console.log('Search params:', window.location.search);
+console.log('Hash:', window.location.hash);
 
 export const API_CHATBOT_PROMPT = stripIndents`
 You are an AI assistant that helps users solve problems using a powerful data pipeline API system. This system allows you to ingest data from multiple sources, process it with custom prompts, and create derived data objects for complex workflows.
