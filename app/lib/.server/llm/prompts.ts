@@ -273,7 +273,7 @@ Your task:
   3. When you are fully confident you can answer, respond with a simple React/javascript code snippet that will allow the needed inputs and outputs, to be embedded into a larger app.
 Only do this once when you know everything you need to, and include a plan using just the functions defined here as well as a simple description.
 
-## Available API Endpoints (all API endpoints are at https://builder.impromptu-labs.com/api_tools, and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}")
+## Available API Endpoints (all API endpoints are at https://staging.impromptu-labs.com/api_tools, and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}")
 ### 1. Data Ingestion: '/input_data'
 **Purpose**: Import data from strings, files, or URLs into the system
 **Method**: POST
@@ -403,9 +403,7 @@ Response (Completed):
 json{
   "task_id": "uuid-string",
   "status": "completed",
-  "output_data": {
-    "research_results": "The returned information you requested is...."
-  },
+  "output_data": "The returned information you requested is....",
   "message": "Task completed successfully"
 }
 
@@ -571,7 +569,7 @@ Be sure that user-input windows are declared outside of main event loops to avoi
 Please ensure that all text and windows have good contrast against their background.
 
 Also please review the API spec and be absolutely sure that you are calling those functions with the appropriate data formats, for example ensuring that you are sending object_name values, encapsulating input correctly in json, and using the exact function endpoints as they were defined.
-As a reminder, all API endpoints are at https://builder.impromptu-labs.com/api_tools ,  and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}".
+As a reminder, all API endpoints are at https://staging.impromptu-labs.com/api_tools ,  and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}".
 
 And remember the actual API functions you have access to, and what they expect:
 

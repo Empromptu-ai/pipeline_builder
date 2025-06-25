@@ -68,20 +68,47 @@ export default async function handleRequest(
 
   responseHeaders.set('Content-Type', 'text/html');
 
-  responseHeaders.set('Cross-Origin-Embedder-Policy', 'require-corp');
-  // responseHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless');
+  // responseHeaders.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  responseHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless');
+ 
   responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
+  responseHeaders.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  // responseHeaders.set('Cross-Origin-Resource-Policy', 'credentialless');
 
+  // responseHeaders.set('Cross-Origin-Opener-Policy', 'unsafe-none');
+
+  // original
   let csp = "default-src 'self'; ";
   csp += "frame-src 'self' https://analytics.impromptu-labs.com https://example.com https:; ";
   csp += "script-src 'self' 'unsafe-inline' 'unsafe-eval'; ";
-  // csp += "style-src 'self' 'unsafe-inline'; ";
   csp += "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; ";
   csp += "img-src 'self' data: https:; ";
-  // csp += "connect-src 'self' https:; ";
   csp += "connect-src 'self' https: wss: ws:; ";
-  // csp += "font-src 'self' data:;";
   csp += "font-src 'self' data: https://fonts.gstatic.com;";
+
+
+  // Super permissive CSP
+  // let csp = "default-src *; ";
+  // csp += "frame-src *; ";
+  // csp += "script-src * 'unsafe-inline' 'unsafe-eval'; ";
+  // csp += "style-src * 'unsafe-inline'; ";
+  // csp += "img-src * data: blob:; ";
+  // csp += "connect-src *; ";
+  // csp += "font-src *; ";
+  // csp += "object-src *; ";
+  // csp += "media-src *; ";
+
+
+  // More permissive CSP that should work with credentialless COEP
+  // let csp = "default-src 'self' https: data: blob:; ";
+  // csp += "frame-src 'self' https: data: blob:; ";
+  // csp += "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; ";
+  // csp += "style-src 'self' 'unsafe-inline' https: data: blob:; ";
+  // csp += "img-src 'self' https: data: blob:; ";
+  // csp += "connect-src 'self' https: wss: ws: data: blob:; ";
+  // csp += "font-src 'self' https: data: blob:; ";
+  // csp += "object-src 'none'; ";
+  // csp += "media-src 'self' https: data: blob:; ";
 
   responseHeaders.set('Content-Security-Policy', csp);
   // responseHeaders.set('Cross-Origin-Embedder-Policy', 'unsafe-none');

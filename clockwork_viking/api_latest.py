@@ -178,7 +178,7 @@ class ResearchTopicRequest(BaseModel):
 class ResearchTopicResponse(BaseModel):
     task_id: str
     status: str
-    output_data: Optional[Dict] = None
+    output_data: Optional[str] = None
     message: str
     created_at: Optional[str] = None
     completed_at: Optional[str] = None
@@ -765,7 +765,7 @@ async def research_topic(request: ResearchTopicRequest,user_token: str = Depends
         return ResearchTopicResponse(
             task_id=task_id,
             status="pending",
-            message="Research task started successfully. Use /research_status/{task_id} to check progress.",
+            message=f"Research task started successfully. Use /research_status/{task_id} to check progress.",
             created_at=created_at.isoformat()
         )
         
@@ -793,7 +793,7 @@ async def get_research_status(task_id: str, user_token: str = Depends(get_user_t
         return ResearchTopicResponse(
             task_id=task_id,
             status=task_data["status"],
-            output_data=task_data.get("output"),
+            output_data=task_data["output"],
             message="Task completed successfully" if task_data["status"] == "completed" else "Task failed",
             created_at=task_data["created_at"].isoformat(),
             completed_at=task_data.get("completed_at", datetime.now()).isoformat()
@@ -804,7 +804,7 @@ async def get_research_status(task_id: str, user_token: str = Depends(get_user_t
         task_data = pending_tasks[task_id]
         
         # Check if task has timed out (30 minutes default)
-        timeout_minutes = 30
+        timeout_minutes = 60
         if datetime.now() - task_data["created_at"] > timedelta(minutes=timeout_minutes):
             # Move to completed with timeout status
             completed_tasks[task_id] = {
@@ -835,14 +835,14 @@ async def get_research_status(task_id: str, user_token: str = Depends(get_user_t
     )
 
 @app.post("/webhook/skyvern/{task_id}")
-async def skyvern_webhook(task_id: str, payload: WebhookPayload, user_token: str = Depends(get_user_token)):
+async def skyvern_webhook(task_id: str, payload: WebhookPayload): #, user_token: str = Depends(get_user_token)):
     """
     Webhook endpoint to receive Skyvern task completion results
     
     This endpoint is called by Skyvern when a task completes.
     It should not be called directly by clients.
     """
-    logger.info(f"Received webhook for task {task_id}: status={payload.status}")
+    logger.info(f"Received webhook for task {task_id}: status={payload}")
     
     if task_id not in pending_tasks:
         logger.warning(f"Received webhook for unknown task: {task_id}")
@@ -853,13 +853,13 @@ async def skyvern_webhook(task_id: str, payload: WebhookPayload, user_token: str
     completed_tasks[task_id] = {
         **task_data,
         "status": payload.status,
-        "output": payload.output,
+        "output": str(payload.output),
         "error": payload.error,
         "completed_at": datetime.now()
     }
     
     logger.info(f"Task {task_id} moved to completed with status: {payload.status}")
-    
+    logger.info(f"The Full Object is: {completed_tasks[task_id]}")
     return {
         "status": "received", 
         "message": f"Webhook received for task {task_id}",
@@ -1246,6 +1246,7 @@ async def input_data(request: InputDataRequest, user_token: str = Depends(get_us
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
 
+
 @app.post("/apply_prompt")
 async def apply_prompt(request: ApplyPromptRequest, user_token: str = Depends(get_user_token)):
     """
@@ -1258,12 +1259,12 @@ async def apply_prompt(request: ApplyPromptRequest, user_token: str = Depends(ge
             obj = await collection.find_one({"object_name": input_spec.input_object_name + user_token})
             if not obj:
                 raise HTTPException(status_code=404, detail=f"Object {input_spec.input_object_name + user_token} not found")
-            input_objects[input_spec.input_object_name + user_token] = obj
+            input_objects[input_spec.input_object_name] = obj
         
         # Step 2: Process each input according to its mode
         processed_inputs = {}
         for input_spec in request.inputs:
-            obj_data = input_objects[input_spec.input_object_name + user_token]
+            obj_data = input_objects[input_spec.input_object_name]
             # Ensure this fits the formula - one string as value for each input.
             for i in range(len(obj_data["data"])):
                 obj_data["data"][i]["value"] = str(obj_data["data"][i]["value"])
@@ -1272,15 +1273,15 @@ async def apply_prompt(request: ApplyPromptRequest, user_token: str = Depends(ge
             if input_spec.mode == "combine_events":
                 # Combine all entries into one
                 combined = combine_events(data_entries)
-                processed_inputs[input_spec.input_object_name + user_token] = [combined]
+                processed_inputs[input_spec.input_object_name] = [combined]
             else:
                 # Keep individual entries
-                processed_inputs[input_spec.input_object_name + user_token] = data_entries
+                processed_inputs[input_spec.input_object_name] = data_entries
         
         # Step 3: Generate combinations based on modes
         combinations = []
         input_names = list(processed_inputs.keys())
-        input_specs_by_name = {spec.input_object_name + user_token: spec for spec in request.inputs}
+        input_specs_by_name = {spec.input_object_name: spec for spec in request.inputs}
         
         if len(input_names) == 1:
             # Single input case
@@ -1355,12 +1356,149 @@ async def apply_prompt(request: ApplyPromptRequest, user_token: str = Depends(ge
                         object_name=obj_name_plus,
                         key_list=final_keys,
                         # value=str(openai_result[obj_name])
-                        value=openai_result[obj_name_plus]
+                        value=openai_result[obj_name]
                     )
             
             results_processed += 1
         
         # Note we aren't sending the user_token part of the created_object_names back.
+        return JSONResponse(
+            content={
+                "message": f"Successfully processed {results_processed} combinations",
+                "created_objects": request.created_object_names,
+                "combinations_processed": len(combinations)
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@app.post("/apply_prompt_old")
+async def apply_prompt_old(request: ApplyPromptRequest, user_token: str = Depends(get_user_token)):
+    """
+    Apply prompts to data combinations and generate new objects
+    """
+    try:
+        # Step 1: Get all input objects from database
+        input_objects = {}
+        for input_spec in request.inputs:
+            obj = await collection.find_one({"object_name": input_spec.input_object_name + user_token})
+            if not obj:
+                raise HTTPException(status_code=404, detail=f"Object {input_spec.input_object_name + user_token} not found")
+            input_objects[input_spec.input_object_name + user_token] = obj
+        
+        # Step 2: Process each input according to its mode
+        processed_inputs = {}
+        for input_spec in request.inputs:
+            obj_data = input_objects[input_spec.input_object_name + user_token]
+            print(f"Examining obj_data: {obj_data}")
+            # Ensure this fits the formula - one string as value for each input.
+            for i in range(len(obj_data["data"])):
+                obj_data["data"][i]["value"] = str(obj_data["data"][i]["value"])
+            data_entries = [DataEntry(**entry) for entry in obj_data["data"]]
+            print('BBBBB')
+            if input_spec.mode == "combine_events":
+                # Combine all entries into one
+                combined = combine_events(data_entries)
+                processed_inputs[input_spec.input_object_name + user_token] = [combined]
+            else:
+                # Keep individual entries
+                processed_inputs[input_spec.input_object_name + user_token] = data_entries
+        print('CCCCC')
+        # Step 3: Generate combinations based on modes
+        combinations = []
+        input_names = list(processed_inputs.keys())
+        input_specs_by_name = {spec.input_object_name + user_token: spec for spec in request.inputs}
+        print('DDDD')
+        if len(input_names) == 1:
+            print('EEEEE')
+            # Single input case
+            name = input_names[0]
+            for entry in processed_inputs[name]:
+                combinations.append({name: entry})
+        else:
+            print('FFFF')
+            # Multiple inputs - check if any use match_keys mode
+            has_match_keys = any(input_specs_by_name[name].mode == "match_keys" for name in input_names)
+            
+            if has_match_keys:
+                print('GGGG')
+                # Handle match_keys mode
+                for i, name1 in enumerate(input_names):
+                    for j, name2 in enumerate(input_names[i+1:], i+1):
+                        if (input_specs_by_name[name1].mode == "match_keys" or 
+                            input_specs_by_name[name2].mode == "match_keys"):
+                            matches = get_matching_entries(
+                                processed_inputs[name1], 
+                                processed_inputs[name2]
+                            )
+                            for entry1, entry2 in matches:
+                                combo = {name1: entry1, name2: entry2}
+                                # Add other inputs if they exist
+                                for other_name in input_names:
+                                    if other_name not in [name1, name2]:
+                                        # For now, just take first entry of other inputs
+                                        if processed_inputs[other_name]:
+                                            combo[other_name] = processed_inputs[other_name][0]
+                                combinations.append(combo)
+            else:
+                print('HHHHH')
+                # All permutations for combine_events and use_individually
+                input_lists = [processed_inputs[name] for name in input_names]
+                for combo_tuple in product(*input_lists):
+                    combo_dict = dict(zip(input_names, combo_tuple))
+                    combinations.append(combo_dict)
+        
+        # Step 4: Apply prompts and call OpenAI
+        results_processed = 0
+        print('IIIII')
+        for combo in combinations:
+            # Replace placeholders in prompt
+            filled_prompt = request.prompt_string
+            all_keys = []
+            
+            for input_name, data_entry in combo.items():
+                # NOTE:  Here we figure out when we should use the summary value instead.
+                length_of_main_value = len(str(data_entry.value))
+                value_to_use = str(data_entry.value)
+                if length_of_main_value > 2000:
+                    value_to_use = data_entry.summary_value
+                
+                placeholder = "{" + input_name + "}"
+                filled_prompt = filled_prompt.replace(placeholder, value_to_use)
+                all_keys.extend(data_entry.key_list)
+            print('JJJJ')
+            # Call OpenAI API
+            openai_result = await call_openai_api(filled_prompt, request.created_object_names) #  + user_token)
+            print('KKKK')
+            # Step 5: Store results
+            unique_keys = list(set(all_keys))
+            new_uuid = str(uuid.uuid4())
+            final_keys = unique_keys + [new_uuid]
+            
+            for obj_name in request.created_object_names:
+                print('LLLL')
+                if obj_name in openai_result:
+                    obj_name_plus = obj_name + user_token
+                    # Ensure target object exists
+                    await get_or_create_object(obj_name_plus)
+                    print('MMMM')
+                    print(f"object_neme: {obj_name_plus}\nvalue: {openai_result[obj_name]}")
+                    # Add the result
+                    await add_data_entry(
+                        object_name=obj_name_plus,
+                        key_list=final_keys,
+                        # value=str(openai_result[obj_name])
+                        value=openai_result[obj_name]
+                    )
+                    print('NNNN')
+            
+            results_processed += 1
+        
+        # Note we aren't sending the user_token part of the created_object_names back.
+        print('OOOOO')
         return JSONResponse(
             content={
                 "message": f"Successfully processed {results_processed} combinations",
