@@ -79,7 +79,7 @@ export default async function handleRequest(
 
   // original
   let csp = "default-src 'self'; ";
-  csp += "frame-src 'self' https://analytics.impromptu-labs.com https://example.com https:; ";
+  csp += "frame-src 'self' https://analytics.impromptu-labs.com https://example.com https://analytics.empromptu.ai https:; ";
   csp += "script-src 'self' 'unsafe-inline' 'unsafe-eval'; ";
   csp += "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; ";
   csp += "img-src 'self' data: https:; ";

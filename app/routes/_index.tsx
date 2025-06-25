@@ -24,7 +24,7 @@ function OptimizerView() {
   return (
     <div className="flex-1 relative">
       <iframe
-        src="https://analytics.impromptu-labs.com/"
+        src="https://analytics.empromptu.ai/"
         className="w-full h-full border-0"
         title="Optimizer App"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
