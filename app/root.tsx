@@ -45,7 +45,7 @@ const inlineThemeCode = stripIndents`
     let theme = localStorage.getItem('bolt_theme');
 
     if (!theme) {
-      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'dark' : 'light';
     }
 
     document.querySelector('html')?.setAttribute('data-theme', theme);

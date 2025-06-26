@@ -7,6 +7,8 @@ import { Chat } from '~/components/chat/Chat.client';
 import { Header } from '~/components/header/Header';
 import { appViewStore } from '~/lib/stores/appView';
 import { requireUserSession } from '~/utils/session.server';
+import { useEffect } from 'react'; 
+
 
 export const meta: MetaFunction = () => {
   return [{ title: 'Emp2' }, { name: 'description', content: 'Talk with the AI assistant' }];
@@ -44,7 +46,7 @@ interface OptimizerViewProps {
 function OptimizerView({ userSession }: OptimizerViewProps) {
   // Build the iframe URL with authentication parameters
   const iframeSrc = `https://analytics.empromptu.ai/?autoLogin=true&username=${encodeURIComponent(userSession.username)}&uid=${encodeURIComponent(userSession.uid)}&apiKey=${encodeURIComponent(userSession.apiKey)}`;
-
+  
   return (
     <div className="flex-1 relative">
       <iframe
@@ -62,6 +64,12 @@ export default function Index() {
   const { user } = useLoaderData<typeof loader>();
   const currentView = useStore(appViewStore);
   
+  // Add this at the very top of your App component
+  useEffect(() => {
+  console.log('App mounted with URL:', window.location.href);
+  console.log('Initial search params:', new URLSearchParams(window.location.search));
+  }, []);
+
   return (
     <div className="flex flex-col h-full w-full">
       <Header />
