@@ -19,12 +19,36 @@ export async function loader({ request }: LoaderFunctionArgs) {
     user: userSession
   });
 }
+// const iframeSrc = `https://analytics.empromptu.ai/?autoLogin=true&username=${userSession.username}&apiKey=${userSession.apiKey}`;
+// function OptimizerView() {
+//   return (
+//     <div className="flex-1 relative">
+//       <iframe
+//         src="https://analytics.empromptu.ai/"
+//         className="w-full h-full border-0"
+//         title="Optimizer App"
+//         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+//       />
+//     </div>
+//   );
+// }
 
-function OptimizerView() {
+interface OptimizerViewProps {
+  userSession: {
+    username: string;
+    uid: string;
+    apiKey: string;
+  };
+}
+
+function OptimizerView({ userSession }: OptimizerViewProps) {
+  // Build the iframe URL with authentication parameters
+  const iframeSrc = `https://analytics.impromptu-labs.com/?autoLogin=true&username=${encodeURIComponent(userSession.username)}&uid=${encodeURIComponent(userSession.uid)}&apiKey=${encodeURIComponent(userSession.apiKey)}`;
+
   return (
     <div className="flex-1 relative">
       <iframe
-        src="https://analytics.empromptu.ai/"
+        src={iframeSrc}
         className="w-full h-full border-0"
         title="Optimizer App"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
@@ -34,6 +58,7 @@ function OptimizerView() {
 }
 
 export default function Index() {
+  //const { user } = useLoaderData<typeof loader>();
   const { user } = useLoaderData<typeof loader>();
   const currentView = useStore(appViewStore);
   
@@ -43,7 +68,7 @@ export default function Index() {
       {currentView === 'builder' ? (
         <ClientOnly fallback={<BaseChat />}>{() => <Chat />}</ClientOnly>
       ) : (
-        <OptimizerView />
+        <OptimizerView userSession={user} />
       )}
     </div>
   );
