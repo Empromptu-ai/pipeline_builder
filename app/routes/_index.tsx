@@ -6,46 +6,40 @@ import { BaseChat } from '~/components/chat/BaseChat';
 import { Chat } from '~/components/chat/Chat.client';
 import { Header } from '~/components/header/Header';
 import { appViewStore } from '~/lib/stores/appView';
-import { requireUserSession } from '~/utils/session.server';
-import { useEffect } from 'react'; 
-
+import { requireUserSession, type UserSession } from '~/utils/session.server';
+// import { getUserSecret, storeApiResponseAsSecrets } from '~/lib/secrets.server';
 
 export const meta: MetaFunction = () => {
-  return [{ title: 'Emp2' }, { name: 'description', content: 'Talk with the AI assistant' }];
+  return [
+    { title: 'Emp2' }, 
+    { name: 'description', content: 'Talk with the AI assistant' }
+  ];
 };
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // This will redirect to /login if user is not authenticated
   const userSession = await requireUserSession(request);
+  
+  // Example: Get some stored secrets for the user
+  // const apiKey = await getUserSecret(userSession.userId, 'api_key');
+  // const customSetting = await getUserSecret(userSession.userId, 'custom_setting');
+  
   return json({
-    user: userSession
+    user: userSession,
+    // userSecrets: {
+    //  apiKey,
+    //  customSetting,
+    //}
   });
 }
-// const iframeSrc = `https://analytics.empromptu.ai/?autoLogin=true&username=${userSession.username}&apiKey=${userSession.apiKey}`;
-// function OptimizerView() {
-//   return (
-//     <div className="flex-1 relative">
-//       <iframe
-//         src="https://analytics.empromptu.ai/"
-//         className="w-full h-full border-0"
-//         title="Optimizer App"
-//         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
-//       />
-//     </div>
-//   );
-// }
 
 interface OptimizerViewProps {
-  userSession: {
-    username: string;
-    uid: string;
-    apiKey: string;
-  };
+  userSession: UserSession;
 }
 
 function OptimizerView({ userSession }: OptimizerViewProps) {
   // Build the iframe URL with authentication parameters
-  const iframeSrc = `https://analytics.empromptu.ai/?autoLogin=true&username=${encodeURIComponent(userSession.username)}&uid=${encodeURIComponent(userSession.uid)}&apiKey=${encodeURIComponent(userSession.apiKey)}`;
+  const iframeSrc = `https://analytics.empromptu.ai/?autoLogin=true&username=${encodeURIComponent(userSession.email)}&uid=${encodeURIComponent(userSession.userId)}&email=${encodeURIComponent(userSession.email)}`;
   
   return (
     <div className="flex-1 relative">
@@ -60,21 +54,16 @@ function OptimizerView({ userSession }: OptimizerViewProps) {
 }
 
 export default function Index() {
-  //const { user } = useLoaderData<typeof loader>();
-  const { user } = useLoaderData<typeof loader>();
+  const { user, userSecrets } = useLoaderData<typeof loader>();
   const currentView = useStore(appViewStore);
-  
-  // Add this at the very top of your App component
-  useEffect(() => {
-  console.log('App mounted with URL:', window.location.href);
-  console.log('Initial search params:', new URLSearchParams(window.location.search));
-  }, []);
 
   return (
     <div className="flex flex-col h-full w-full">
       <Header />
       {currentView === 'builder' ? (
-        <ClientOnly fallback={<BaseChat />}>{() => <Chat />}</ClientOnly>
+        <ClientOnly fallback={<BaseChat />}>
+          {() => <Chat />}
+        </ClientOnly>
       ) : (
         <OptimizerView userSession={user} />
       )}
@@ -82,35 +71,30 @@ export default function Index() {
   );
 }
 
-// // app/routes/_index.tsx
-// import { json, type MetaFunction, type LoaderFunctionArgs } from '@remix-run/node';
-// import { ClientOnly } from 'remix-utils/client-only';
-// import { useLoaderData } from '@remix-run/react';
-// import { BaseChat } from '~/components/chat/BaseChat';
-// import { Chat } from '~/components/chat/Chat.client';
-// import { Header } from '~/components/header/Header';
-// import { requireUserSession } from '~/utils/session.server';
-
-// export const meta: MetaFunction = () => {
-//   return [{ title: 'Emp2' }, { name: 'description', content: 'Talk with the AI assistant' }];
-// };
-
-// export async function loader({ request }: LoaderFunctionArgs) {
-//   // This will redirect to /login if user is not authenticated
+// Example action to demonstrate calling external API and storing secrets
+// export async function action({ request }: LoaderFunctionArgs) {
 //   const userSession = await requireUserSession(request);
-  
-//   return json({
-//     user: userSession
-//   });
-// }
-
-// export default function Index() {
-//   const { user } = useLoaderData<typeof loader>();
-  
-//   return (
-//     <div className="flex flex-col h-full w-full">
-//       <Header />
-//       <ClientOnly fallback={<BaseChat />}>{() => <Chat />}</ClientOnly>
-//     </div>
-//   );
+//   const formData = await request.formData();
+//   const action = formData.get('action');
+// 
+//   if (action === 'fetch-and-store-api-data') {
+//     try {
+//       // Example: Call external API
+//       const response = await fetch('https://jsonplaceholder.typicode.com/users/1');
+//       const apiData = await response.json();
+//       
+//       // Store the API response as secrets
+//       const results = await storeApiResponseAsSecrets(
+//         userSession.userId,
+//         apiData,
+//         'user_profile'
+//       );
+//       
+//       return json({ success: true, results });
+//     } catch (error) {
+//       return json({ success: false, error: error.message }, { status: 500 });
+//     }
+//   }
+//   
+//   return json({ success: false, error: 'Unknown action' }, { status: 400 });
 // }

@@ -1,59 +1,118 @@
-// app/utils/session.server.ts
-import { redirect } from '@remix-run/node';
+import { createCookieSessionStorage, redirect } from '@remix-run/node';
+import { getUser, refreshAccessToken } from '~/lib/workos.server';
+// import { getUserSecret } from '~/lib/secrets.server';
 
-// Simple in-memory storage for development
-// NOTE: This will not persist across server restarts
-const sessions = new Map<string, {
-  username: string;
-  uid: string;
-  apiKey: string;
-}>();
+// if (!process.env.SESSION_SECRET) {
+//   throw new Error('SESSION_SECRET is required');
+// }
 
-function generateSessionId() {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+export const sessionStorage = createCookieSessionStorage({
+  cookie: {
+    name: '__session',
+    httpOnly: true,
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+    path: '/',
+    sameSite: 'lax',
+    // secrets: [process.env.SESSION_SECRET],
+    secure: process.env.NODE_ENV === 'production',
+  },
+});
+
+export interface UserSession {
+  userId: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  accessToken: string;
+  refreshToken: string;
+  // Analytics fields for backward compatibility
+  analyticsUid?: string;
+  analyticsApiKey?: string;
+  analyticsUsername?: string;
 }
 
 export async function createUserSession(
-  username: string,
-  uid: string,
-  apiKey: string,
+  userSession: UserSession,
   redirectTo: string = '/'
 ) {
-  const sessionId = generateSessionId();
-  sessions.set(sessionId, { username, uid, apiKey });
+  const session = await sessionStorage.getSession();
+  session.set('userSession', userSession);
   
   return redirect(redirectTo, {
     headers: {
-      'Set-Cookie': `session=${sessionId}; HttpOnly; Path=/; Max-Age=${60 * 60 * 24 * 30}`,
+      'Set-Cookie': await sessionStorage.commitSession(session),
     },
   });
 }
 
-export async function getUserSession(request: Request) {
-  const cookieHeader = request.headers.get('Cookie');
-  if (!cookieHeader) {
-    return { username: null, uid: null, apiKey: null };
-  }
-
-  const sessionMatch = cookieHeader.match(/session=([^;]+)/);
-  if (!sessionMatch) {
-    return { username: null, uid: null, apiKey: null };
-  }
-
-  const sessionId = sessionMatch[1];
-  const session = sessions.get(sessionId);
+export async function getUserSession(request: Request): Promise<UserSession | null> {
+  const cookie = request.headers.get('Cookie');
+  const session = await sessionStorage.getSession(cookie);
+  const userSession = session.get('userSession') as UserSession | undefined;
   
-  if (!session) {
-    return { username: null, uid: null, apiKey: null };
+  if (!userSession) {
+    return null;
   }
 
-  return session;
+  // If this is a WorkOS session, enhance it with analytics data
+  if (userSession.userId && !userSession.userId.startsWith('analytics_')) {
+    try {
+      // Try to refresh the user data from WorkOS
+      const user = await getUser(userSession.userId);
+      
+      // Get analytics credentials from secrets
+      // const analyticsUid = await getUserSecret(userSession.userId, 'analytics_uid');
+      // const analyticsApiKey = await getUserSecret(userSession.userId, 'analytics_api_key');
+      // const analyticsUsername = await getUserSecret(userSession.userId, 'analytics_username');
+      
+      // Update session with fresh user data and analytics info
+      const updatedSession: UserSession = {
+        ...userSession,
+        email: user.email,
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined,
+        // analyticsUid: analyticsUid || undefined,
+        // analyticsApiKey: analyticsApiKey || undefined,
+        // analyticsUsername: analyticsUsername || undefined,
+      };
+
+      return updatedSession;
+    } catch (error) {
+      // If user fetch fails, try to refresh the access token
+      try {
+        const { accessToken, refreshToken } = await refreshAccessToken(userSession.refreshToken);
+        
+        // Get analytics credentials from secrets
+        // const analyticsUid = await getUserSecret(userSession.userId, 'analytics_uid');
+        // const analyticsApiKey = await getUserSecret(userSession.userId, 'analytics_api_key');
+        // const analyticsUsername = await getUserSecret(userSession.userId, 'analytics_username');
+        
+        const updatedSession: UserSession = {
+          ...userSession,
+          accessToken,
+          refreshToken,
+          // analyticsUid: analyticsUid || undefined,
+          // analyticsApiKey: analyticsApiKey || undefined,
+          // analyticsUsername: analyticsUsername || undefined,
+        };
+
+        return updatedSession;
+      } catch (refreshError) {
+        // If refresh also fails, clear the session
+        console.error('Failed to refresh user session:', refreshError);
+        return null;
+      }
+    }
+  }
+
+  // For analytics-only sessions (legacy), return as-is
+  return userSession;
 }
 
-export async function requireUserSession(request: Request) {
+export async function requireUserSession(request: Request): Promise<UserSession> {
   const userSession = await getUserSession(request);
   
-  if (!userSession.username || !userSession.uid || !userSession.apiKey) {
+  if (!userSession) {
     throw redirect('/login');
   }
   
@@ -61,18 +120,12 @@ export async function requireUserSession(request: Request) {
 }
 
 export async function logout(request: Request) {
-  const cookieHeader = request.headers.get('Cookie');
-  if (cookieHeader) {
-    const sessionMatch = cookieHeader.match(/session=([^;]+)/);
-    if (sessionMatch) {
-      const sessionId = sessionMatch[1];
-      sessions.delete(sessionId);
-    }
-  }
+  const cookie = request.headers.get('Cookie');
+  const session = await sessionStorage.getSession(cookie);
   
   return redirect('/login', {
     headers: {
-      'Set-Cookie': 'session=; HttpOnly; Path=/; Max-Age=0',
+      'Set-Cookie': await sessionStorage.destroySession(session),
     },
   });
 }
