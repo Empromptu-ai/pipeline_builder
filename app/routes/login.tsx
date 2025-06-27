@@ -34,12 +34,22 @@ export async function registerWithAnalytics(username: string, password: string, 
       body: JSON.stringify({ username, password, email }),
     });
     
-    const [success, msg] = await registerResponse.json();
-    if (!success) {
-      throw new Error(msg || 'Registration failed');
-    }
+
+    // const [success, msg] = await registerResponse.json();
+    // if (!success) {
+    //   throw new Error(msg || 'Registration failed');
+    // }
+    // 
+    // return { success: true };
+
+    const [success, ...rest] = await registerResponse.json();
+    if (!success) throw new Error(rest[0] || 'Registration failed');
     
-    return { success: true };
+    // if the backend already gave us uid + apiKey, surface them:
+    const [uid, apiKey] = rest;
+    return { success: true, uid, apiKey };
+
+
   } catch (error) {
     console.error('Analytics registration error:', error);
     throw error;
@@ -48,13 +58,24 @@ export async function registerWithAnalytics(username: string, password: string, 
 
 export async function loginWithAnalytics(username: string, password: string) {
   try {
+    console.log('AAAAA')
     const loginResponse = await fetch('http://analytics.empromptu.ai:5000/api/verify_user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
+    console.log('BBBBB')
+
+    console.log('Login response status:', loginResponse.status);
+
+
+    // Read raw JSON response before destructuring
+    const loginData = await loginResponse.json();
+    console.log('Raw login response JSON:', loginData);
     
-    const [isGoodAccount, uid, apiKey] = await loginResponse.json();
+    const [isGoodAccount, uid, apiKey] = loginData; // await loginResponse.json();
+    
+    console.log('Destructured values -> isGoodAccount:', isGoodAccount, 'uid:', uid, 'apiKey:', apiKey);
     if (!isGoodAccount) {
       throw new Error('Invalid username or password');
     }
