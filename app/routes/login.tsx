@@ -26,7 +26,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 // Helper functions for analytics API integration
-async function registerWithAnalytics(username: string, password: string, email: string) {
+export async function registerWithAnalytics(username: string, password: string, email: string) {
   try {
     const registerResponse = await fetch('http://analytics.empromptu.ai:5000/api/register_user', {
       method: 'POST',
@@ -46,7 +46,7 @@ async function registerWithAnalytics(username: string, password: string, email: 
   }
 }
 
-async function loginWithAnalytics(username: string, password: string) {
+export async function loginWithAnalytics(username: string, password: string) {
   try {
     const loginResponse = await fetch('http://analytics.empromptu.ai:5000/api/verify_user', {
       method: 'POST',

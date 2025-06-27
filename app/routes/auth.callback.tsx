@@ -16,19 +16,27 @@ async function createAnalyticsAccount(email: string, workosUserId: string) {
       body: JSON.stringify({ username, password, email }),
     });
     
+    console.log('Register response status:', registerResponse.status);
     const [success, msg] = await registerResponse.json();
     if (!success) {
       throw new Error(msg || 'Analytics registration failed');
     }
     
     // Now login to get the UID and API key
+    console.log('Logging in...');
     const loginResponse = await fetch('http://analytics.empromptu.ai:5000/api/verify_user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
+
+
+    console.log('Login response status:', loginResponse.status);
+
     
     const [isGoodAccount, uid, apiKey] = await loginResponse.json();
+    console.log('UID:', uid);
+    console.log('API Key:', apiKey);
     if (!isGoodAccount) {
       throw new Error('Analytics account created but login failed');
     }
