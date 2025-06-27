@@ -39,7 +39,8 @@ interface OptimizerViewProps {
 
 function OptimizerView({ userSession }: OptimizerViewProps) {
   // Build the iframe URL with authentication parameters
-  const iframeSrc = `https://analytics.empromptu.ai/?autoLogin=true&username=${encodeURIComponent(userSession.email)}&uid=${encodeURIComponent(userSession.userId)}&email=${encodeURIComponent(userSession.email)}`;
+  // const iframeSrc = `https://analytics.empromptu.ai/?autoLogin=true&username=${encodeURIComponent(userSession.email)}&uid=${encodeURIComponent(userSession.userId)}&email=${encodeURIComponent(userSession.email)}`;
+  const iframeSrc = `https://analytics.empromptu.ai/?autoLogin=true&username=${encodeURIComponent(userSession.analyticsUsername)}&uid=${encodeURIComponent(userSession.analyticsUid)}&&apiKey=${encodeURIComponent(userSession.analyticsApiKey)}`;
   
   return (
     <div className="flex-1 relative">
