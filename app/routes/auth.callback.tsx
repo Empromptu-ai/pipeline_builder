@@ -10,7 +10,7 @@ async function createAnalyticsAccount(email: string, workosUserId: string) {
     // const username = `${email.split('@')[0]}_${workosUserId.slice(-8)}`;
     // const password = `temp_${workosUserId}_${Date.now()}`; // Temporary password
     const username = `${email.split('@')[0]}_${workosUserId.slice(-8)}`.toLowerCase();
-    const password = `temp_${workosUserId}_${Date.now()}`.toLowerCase();    
+    const password = `temp_${workosUserId}`.toLowerCase();    
 
     console.log('Registering user...');
     console.log('Registration request payload:', { username, password, email });
