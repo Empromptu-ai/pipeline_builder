@@ -165,9 +165,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
       lastName: user.lastName || undefined,
       accessToken,
       refreshToken,
-      analyticsUid: user.id,
+      analyticsUid: analyticsData.uid,
       analyticsApiKey: analyticsData.apiKey,
       analyticsUsername: analyticsData.username,
+      //analyticsPassword: analyticsData.password
     };
 
     console.log('WE MADE A SESSION:', user.email);
