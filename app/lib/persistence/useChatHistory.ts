@@ -6,6 +6,8 @@ import { toast } from 'react-toastify';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { getMessages, getNextId, getUrlId, openDatabase, setMessages } from './db';
 
+export const projectId = atom<number | undefined>(undefined);
+
 export interface ChatHistoryItem {
   id: string;
   urlId?: string;
@@ -83,13 +85,37 @@ export function useChatHistory() {
         // NOTE: This is where the project title gets set, so we need to 
         // make a corrresponding project in the Optimizer.
 
-        // await callYourAPI({
-        //  description: firstArtifact.title,
-        //  userId: user.id, // or whatever properties userSession has
-        //  userEmail: user.email,
-        //});
-        console.log(`HAVE A USER HERE: ${user}`);
-        console.log(`WANT TO MAKE A PROJECT HERE: ${firstArtifact.title}`);
+        try {
+          // Call your API
+          const response = await fetch('https://analytics.empromptu.ai/api/projects/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${user.analyticsUid}`,
+            },
+            body: JSON.stringify({
+              name: firstArtifact.title,
+              description: '',
+              code: true,
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            // Store the project_id from the returned array
+            if (result && result.length > 0 && result[0].project_id) {
+              projectId.set(result[0].project_id);
+              console.log('Project created with ID:', result[0].project_id);
+            }
+          } else {
+            console.error('API call failed:', response.status, response.statusText);
+            toast.error('Failed to create project');
+          }
+        } catch (error) {
+          console.error('API call error:', error);
+          toast.error('Error creating project');
+        }
+
  
 
         /*
