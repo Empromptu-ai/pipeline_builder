@@ -7,9 +7,14 @@ import { createUserSession } from '~/utils/session.server';
 async function createAnalyticsAccount(email: string, workosUserId: string) {
   try {
     // Generate a username based on email and WorkOS ID
-    const username = `${email.split('@')[0]}_${workosUserId.slice(-8)}`;
-    const password = `temp_${workosUserId}_${Date.now()}`; // Temporary password
-    
+    // const username = `${email.split('@')[0]}_${workosUserId.slice(-8)}`;
+    // const password = `temp_${workosUserId}_${Date.now()}`; // Temporary password
+    const username = `${email.split('@')[0]}_${workosUserId.slice(-8)}`.toLowerCase();
+    const password = `temp_${workosUserId}_${Date.now()}`.toLowerCase();    
+
+    console.log('Registering user...');
+    console.log('Registration request payload:', { username, password, email });
+
     const registerResponse = await fetch('http://analytics.empromptu.ai:5000/api/register_user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -17,13 +22,45 @@ async function createAnalyticsAccount(email: string, workosUserId: string) {
     });
     
     console.log('Register response status:', registerResponse.status);
-    const [success, msg] = await registerResponse.json();
+   
+
+
+
+    //  const [success, msg] = await registerResponse.json();
+    const registerData = await registerResponse.json();
+    console.log('Raw register response JSON:', registerData);
+    console.log('Type of registerData:', typeof registerData);
+    console.log('Is array?', Array.isArray(registerData));
+
+    // Try the same pattern as traditional login:
+    const [success, ...rest] = registerData;
+    console.log('Registration success:', success);
+    console.log('Registration rest:', rest);
+
+
+
+
+
     if (!success) {
       throw new Error(msg || 'Analytics registration failed');
     }
+
+
+    // Check if UID and API key were returned directly from registration:
+    if (rest.length >= 2) {
+      const [uid, apiKey] = rest;
+      console.log('Got UID and API key from registration:', uid, apiKey);
+      return { uid, apiKey, username, password };
+    }
+
+    // If not, continue with login attempt...
+    console.log('No UID/API key from registration, attempting login...');
+
+    
     
     // Now login to get the UID and API key
     console.log('Logging in...');
+    console.log('Login request payload:', { username, password });
     const loginResponse = await fetch('http://analytics.empromptu.ai:5000/api/verify_user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -33,8 +70,15 @@ async function createAnalyticsAccount(email: string, workosUserId: string) {
 
     console.log('Login response status:', loginResponse.status);
 
+    const loginData = await loginResponse.json();
+    console.log('Raw login response JSON:', loginData);
+    console.log('Type of loginData:', typeof loginData);
+    console.log('Is array?', Array.isArray(loginData));
+
+    const [isGoodAccount, uid, apiKey] = loginData;
+    console.log('Destructured values -> isGoodAccount:', isGoodAccount, 'uid:', uid, 'apiKey:', apiKey);
+    // const [isGoodAccount, uid, apiKey] = await loginResponse.json();
     
-    const [isGoodAccount, uid, apiKey] = await loginResponse.json();
     console.log('UID:', uid);
     console.log('API Key:', apiKey);
     if (!isGoodAccount) {
