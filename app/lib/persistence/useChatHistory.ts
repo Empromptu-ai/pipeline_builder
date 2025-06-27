@@ -22,7 +22,7 @@ export const chatId = atom<string | undefined>(undefined);
 export const description = atom<string | undefined>(undefined);
 
 export function useChatHistory() {
-  const { id: mixedId } = useLoaderData<{ id?: string }>();
+  const { id: mixedId, user } = useLoaderData<{ id?: string; user?: any }>();
 
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
   const [ready, setReady] = useState<boolean>(false);
@@ -79,6 +79,18 @@ export function useChatHistory() {
 
       if (!description.get() && firstArtifact?.title) {
         description.set(firstArtifact?.title);
+
+        // NOTE: This is where the project title gets set, so we need to 
+        // make a corrresponding project in the Optimizer.
+
+        // await callYourAPI({
+        //  description: firstArtifact.title,
+        //  userId: user.id, // or whatever properties userSession has
+        //  userEmail: user.email,
+        //});
+        console.log(`HAVE A USER HERE: ${user}`);
+        console.log(`WANT TO MAKE A PROJECT HERE: ${firstArtifact.title}`);
+ 
 
         /*
          * NEW - Also add to URL -
