@@ -22,12 +22,12 @@ export const chatId = atom<string | undefined>(undefined);
 export const description = atom<string | undefined>(undefined);
 
 export function useChatHistory() {
-  const navigate = useNavigate();
   const { id: mixedId } = useLoaderData<{ id?: string }>();
 
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
   const [ready, setReady] = useState<boolean>(false);
   const [urlId, setUrlId] = useState<string | undefined>();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!db) {
@@ -80,10 +80,12 @@ export function useChatHistory() {
       if (!description.get() && firstArtifact?.title) {
         description.set(firstArtifact?.title);
 
-        // NEW - Also add to URL - 
-        // const url = new URL(window.location.href);
-        // url.searchParams.set('desc', firstArtifact.title);
-        // window.history.replaceState({}, '', url);
+        /*
+         * NEW - Also add to URL -
+         * const url = new URL(window.location.href);
+         * url.searchParams.set('desc', firstArtifact.title);
+         * window.history.replaceState({}, '', url);
+         */
       }
 
       if (initialMessages.length === 0 && !chatId.get()) {

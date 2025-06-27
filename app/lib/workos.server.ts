@@ -37,6 +37,10 @@ export const WORKOS_REDIRECT_URI = process.env.WORKOS_REDIRECT_URI || 'http://lo
 
 // Helper function to get authorization URL for Google OAuth
 export function getAuthorizationUrl() {
+  if (process.env.NODE_ENV === 'development') {
+    return '/auth/callback?code=dev';
+  }
+
   return workos.userManagement.getAuthorizationUrl({
     provider: 'GoogleOAuth',
     clientId: WORKOS_CLIENT_ID,
@@ -46,6 +50,25 @@ export function getAuthorizationUrl() {
 
 // Helper function to authenticate user with code
 export async function authenticateUser(code: string) {
+  if (process.env.NODE_ENV === 'development' && code === 'dev') {
+    console.log('Bypassing WorkOS for local development');
+    return {
+      user: {
+        id: 'user_dev',
+        email: 'dev@foo.com',
+        firstName: 'Dev',
+        lastName: 'User',
+        emailVerified: true,
+        profilePictureUrl: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        raw: {},
+      },
+      accessToken: 'dev_access_token',
+      refreshToken: 'dev_refresh_token',
+    };
+  }
+
   try {
     const { user, accessToken, refreshToken } = await workos.userManagement.authenticateWithCode({
       code,
@@ -65,6 +88,20 @@ export async function authenticateUser(code: string) {
 
 // Helper function to get user by ID
 export async function getUser(userId: string) {
+  if (process.env.NODE_ENV === 'development' && userId === 'user_dev') {
+    return {
+      id: 'user_dev',
+      email: 'dev@foo.com',
+      firstName: 'Dev',
+      lastName: 'User',
+      emailVerified: true,
+      profilePictureUrl: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      raw: {},
+    };
+  }
+
   try {
     return await workos.userManagement.getUser(userId);
   } catch (error) {
@@ -75,8 +112,15 @@ export async function getUser(userId: string) {
 
 // Helper function to refresh access token
 export async function refreshAccessToken(refreshToken: string) {
+  if (process.env.NODE_ENV === 'development' && refreshToken === 'dev_refresh_token') {
+    return {
+      accessToken: 'dev_access_token_refreshed',
+      refreshToken: 'dev_refresh_token_refreshed',
+    };
+  }
+
   try {
-    const { accessToken, refreshToken: newRefreshToken } = await workos.userManagement.refreshAccessToken({
+    const { accessToken, refreshToken: newRefreshToken } = await workos.userManagement.authenticateWithRefreshToken({
       refreshToken,
       clientId: WORKOS_CLIENT_ID,
     });
