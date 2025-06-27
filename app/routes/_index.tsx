@@ -19,7 +19,7 @@ export const meta: MetaFunction = () => {
 export async function loader({ request }: LoaderFunctionArgs) {
   // This will redirect to /login if user is not authenticated
   const userSession = await requireUserSession(request);
-  
+  console.log('Now in the Loader, UserSession = ', userSession);
   // Example: Get some stored secrets for the user
   // const apiKey = await getUserSecret(userSession.userId, 'api_key');
   // const customSetting = await getUserSecret(userSession.userId, 'custom_setting');
@@ -39,6 +39,7 @@ interface OptimizerViewProps {
 
 function OptimizerView({ userSession }: OptimizerViewProps) {
   // Build the iframe URL with authentication parameters
+  console.log('Finally, time to auto-login, UserSession:', userSession.userId);
   // const iframeSrc = `https://analytics.empromptu.ai/?autoLogin=true&username=${encodeURIComponent(userSession.email)}&uid=${encodeURIComponent(userSession.userId)}&email=${encodeURIComponent(userSession.email)}`;
   const iframeSrc = `https://analytics.empromptu.ai/?autoLogin=true&username=${encodeURIComponent(userSession.analyticsUsername)}&uid=${encodeURIComponent(userSession.analyticsUid)}&&apiKey=${encodeURIComponent(userSession.analyticsApiKey)}`;
   
@@ -56,7 +57,14 @@ function OptimizerView({ userSession }: OptimizerViewProps) {
 
 export default function Index() {
   const { user, userSecrets } = useLoaderData<typeof loader>();
+  console.log('Back from the loader, user is:', user.userId);
+  console.log('Back from the loader, appViewStore is:', appViewStore);
   const currentView = useStore(appViewStore);
+  console.log('Made current View:', currentView);
+
+
+  console.log('Now in the Index function, UserSession:', user.userId);
+  console.log('And the whole UserSession:', user);
 
   return (
     <div className="flex flex-col h-full w-full">

@@ -80,6 +80,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     );
   }
 
+  console.log('userId:', user.id);
   // 4 . Build one session that contains both WorkOS and analytics info
   return createUserSession(
     {

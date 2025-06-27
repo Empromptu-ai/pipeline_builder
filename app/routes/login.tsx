@@ -113,12 +113,12 @@ export async function action({ request }: ActionFunctionArgs) {
       // Create a user session with analytics credentials
       // Note: This creates a session with analytics data, but WorkOS will handle the main auth
       const userSession = {
-        userId: `analytics_${uid}`, // Temporary ID until WorkOS auth
+        userId: `${uid}`, // Temporary ID until WorkOS auth
         email,
         firstName: username,
         lastName: undefined,
-        accessToken: 'temp', // Will be replaced by WorkOS
-        refreshToken: 'temp', // Will be replaced by WorkOS
+        // accessToken: 'temp', // Will be replaced by WorkOS
+        // refreshToken: 'temp', // Will be replaced by WorkOS
         analyticsUid: uid,
         analyticsApiKey: apiKey,
         analyticsUsername: username,
@@ -132,12 +132,12 @@ export async function action({ request }: ActionFunctionArgs) {
 
       // Create a user session with analytics credentials
       const userSession = {
-        userId: `analytics_${uid}`, // Temporary ID until WorkOS auth
+        userId: `${uid}`, // Temporary ID until WorkOS auth
         email: email || `${username}@analytics.local`, // Fallback email
         firstName: username,
         lastName: undefined,
-        accessToken: 'temp', // Will be replaced by WorkOS
-        refreshToken: 'temp', // Will be replaced by WorkOS
+        // accessToken: 'temp', // Will be replaced by WorkOS
+        // refreshToken: 'temp', // Will be replaced by WorkOS
         analyticsUid: uid,
         analyticsApiKey: apiKey,
         analyticsUsername: username,

@@ -147,12 +147,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
       // For new WorkOS users, create analytics account automatically
       analyticsData = await createAnalyticsAccount(user.email, user.id);
       console.log('Analytics account created for new user:', analyticsData.username);
+      console.log('UserId is:', user.id);
+      console.log('User Email is:', user.email);
+
     } catch (analyticsError) {
       console.error('Failed to create analytics account:', analyticsError);
       // Continue without analytics integration - user can set it up later
       analyticsData = null;
     }
 
+    console.log('userId about to become session:', user.id);
     // Create user session
     const userSession = {
       userId: user.id,
@@ -161,24 +165,31 @@ export async function loader({ request }: LoaderFunctionArgs) {
       lastName: user.lastName || undefined,
       accessToken,
       refreshToken,
+      analyticsUid: user.id,
+      analyticsApiKey: analyticsData.apiKey,
+      analyticsUsername: analyticsData.username,
     };
 
+    console.log('WE MADE A SESSION:', user.email);
+
     // Store analytics credentials as secrets if successful
-    if (analyticsData) {
-      try {
-        // await storeUserSecret(user.id, 'analytics_uid', analyticsData.uid, 'Analytics system user ID');
-        // await storeUserSecret(user.id, 'analytics_api_key', analyticsData.apiKey, 'Analytics system API key');
-        // await storeUserSecret(user.id, 'analytics_username', analyticsData.username, 'Analytics system username');
-        // await storeUserSecret(user.id, 'analytics_password', analyticsData.password, 'Analytics system password');
-        
-        console.log('Analytics credentials not stored for user, consider remaking this:', user.email);
-      } catch (secretError) {
-        console.error('Failed to store analytics credentials:', secretError);
-      }
-    }
+    // Edit: turns out there is no secrets vault in Ba Sing Se. Just keep stuff in the session.
+    // if (analyticsData) {
+    //  try {
+    //    // await storeUserSecret(user.id, 'analytics_uid', analyticsData.uid, 'Analytics system user ID');
+    //    // await storeUserSecret(user.id, 'analytics_api_key', analyticsData.apiKey, 'Analytics system API key');
+    //    // await storeUserSecret(user.id, 'analytics_username', analyticsData.username, 'Analytics system username');
+    //    // await storeUserSecret(user.id, 'analytics_password', analyticsData.password, 'Analytics system password');
+    //    
+    //    console.log('Analytics credentials not stored for user, consider remaking this:', user.email);
+    //  } catch (secretError) {
+    //    console.error('Failed to store analytics credentials:', secretError);
+    //  }
+    //}
 
     // Create session and redirect to home
-    return createUserSession(userSession, '/');
+    // return createUserSession(userSession, '/');
+    return createUserSession(userSession);
   } catch (error) {
     console.error('Authentication failed:', error);
     throw new Response('Authentication failed', { status: 500 });

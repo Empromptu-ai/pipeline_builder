@@ -36,13 +36,28 @@ export async function createUserSession(
   redirectTo: string = '/'
 ) {
   const session = await sessionStorage.getSession();
+  console.error('ABOUT TO MAKE SESSION WITH USERID:', userSession.userId);
   session.set('userSession', userSession);
+  console.error('JUST MADE SESSION WITH USERID:', userSession.userId);
+ 
+
+  const cookieHeader = await sessionStorage.commitSession(session);
   
+
+  console.log('Set-Cookie header being sent:', cookieHeader);
+
   return redirect(redirectTo, {
     headers: {
-      'Set-Cookie': await sessionStorage.commitSession(session),
+      'Set-Cookie': cookieHeader,
     },
   });
+
+  
+  //return redirect(redirectTo, {
+  //  headers: {
+  //    'Set-Cookie': await sessionStorage.commitSession(session),
+  //  },
+  //});
 }
 
 export async function getUserSession(request: Request): Promise<UserSession | null> {
@@ -54,8 +69,10 @@ export async function getUserSession(request: Request): Promise<UserSession | nu
     return null;
   }
 
-  // If this is a WorkOS session, enhance it with analytics data
-  if (userSession.userId && !userSession.userId.startsWith('analytics_')) {
+  // If this is a WorkOS session, refresh it and/or enhance it with analytics data
+  // if (userSession.userId && !userSession.userId.startsWith('analytics_')) {
+  if (userSession.userId && userSession.refreshToken) {
+    console.log('WorkOS Refreshable Oauth Record, attempting to enrich or refresh:', userSession.userId);
     try {
       // Try to refresh the user data from WorkOS
       const user = await getUser(userSession.userId);
@@ -75,11 +92,14 @@ export async function getUserSession(request: Request): Promise<UserSession | nu
         // analyticsApiKey: analyticsApiKey || undefined,
         // analyticsUsername: analyticsUsername || undefined,
       };
+      console.log('Updated WorkOS Oauth Record:', updatedSession.userId);
+
 
       return updatedSession;
     } catch (error) {
       // If user fetch fails, try to refresh the access token
       try {
+        console.log('Failed to fetch session, attempting to refresh:', userSession.userId);
         const { accessToken, refreshToken } = await refreshAccessToken(userSession.refreshToken);
         
         // Get analytics credentials from secrets
@@ -106,6 +126,7 @@ export async function getUserSession(request: Request): Promise<UserSession | nu
   }
 
   // For analytics-only sessions (legacy), return as-is
+  console.log('Legacy system account, keeping as-is:', userSession.userId);
   return userSession;
 }
 
@@ -115,7 +136,7 @@ export async function requireUserSession(request: Request): Promise<UserSession>
   if (!userSession) {
     throw redirect('/login');
   }
-  
+  console.log('Returning session from requireUserSession:', userSession.userId);
   return userSession;
 }
 
