@@ -15,7 +15,7 @@ export const meta: MetaFunction = () => {
     { name: 'description', content: 'Talk with the AI assistant' }
   ];
 };
-
+ 
 export async function loader({ request }: LoaderFunctionArgs) {
   // This will redirect to /login if user is not authenticated
   const userSession = await requireUserSession(request);
