@@ -140,9 +140,8 @@ export function useChatHistory() {
         if (response.ok) {
           const result = await response.json();
           // Store the project_id from the returned array
-          if (result && result.length > 0 && result[0].project_id) {
-            projectId.set(result[0].project_id);
-            console.log('Project created with ID:', result[0].project_id);
+          if (result && result.length > 0) {
+            console.log('Project and user details recorded:', result);
           }
         } else {
           console.error('API call failed:', response.status, response.statusText);
