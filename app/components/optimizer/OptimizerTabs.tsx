@@ -14,15 +14,15 @@ const tabItems = [
 export function OptimizerTabs() {
   const { projectId, taskId } = useStore(optimizerContextStore);
 
-  if (!projectId || !taskId) {
-    return (
-      <aside className="w-48 border-r flex-shrink-0 transition-colors bg-bolt-elements-background-depth-1 border-bolt-elements-borderColor">
-        <div className="p-4 text-sm text-bolt-elements-textSecondary">
-          Please select a project and task to see optimization options.
-        </div>
-      </aside>
-    );
-  }
+  // if (!projectId || !taskId) {
+  //   return (
+  //     <aside className="w-48 border-r flex-shrink-0 transition-colors bg-bolt-elements-background-depth-1 border-bolt-elements-borderColor">
+  //       <div className="p-4 text-sm text-bolt-elements-textSecondary">
+  //         Please select a project and task to see optimization options.
+  //       </div>
+  //     </aside>
+  //   );
+  // }
 
   return (
     <aside className="w-48 border-r flex-shrink-0 transition-colors bg-bolt-elements-background-depth-1 border-bolt-elements-borderColor">
