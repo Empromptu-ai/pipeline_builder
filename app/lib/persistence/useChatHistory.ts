@@ -6,6 +6,8 @@ import { toast } from 'react-toastify';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { getMessages, getNextId, getUrlId, openDatabase, setMessages } from './db';
 
+import { sessionUid  } from '~/lib/.server/llm/prompts';
+
 export const projectId = atom<number | undefined>(undefined);
 
 export interface ChatHistoryItem {
@@ -86,7 +88,7 @@ export function useChatHistory() {
         // make a corrresponding project in the Optimizer.
 
         try {
-          // Call your API
+          // Call projects API
           const response = await fetch('https://analytics.empromptu.ai/api/projects/', {
             method: 'POST',
             headers: {
@@ -116,7 +118,40 @@ export function useChatHistory() {
           toast.error('Error creating project');
         }
 
- 
+        const currentsessionUid = sessionUid.get();
+
+        // Call project/user logger API
+        const response = await fetch('https://staging.empromptu.ai/api/record_project/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${user.analyticsUid}`,
+          },
+          body: JSON.stringify({
+            project_name: firstArtifact.title,
+            project_id: result[0].project_id,
+            session_uid: currentsessionUid,
+            user_api_key: user.analyticsApiKey,
+            user_name: user.analyticsUsername,
+            user_id: user.analyticsUid,
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          // Store the project_id from the returned array
+          if (result && result.length > 0 && result[0].project_id) {
+            projectId.set(result[0].project_id);
+            console.log('Project created with ID:', result[0].project_id);
+          }
+        } else {
+          console.error('API call failed:', response.status, response.statusText);
+          toast.error('Failed to create project');
+        }
+      } catch (error) {
+        console.error('API call error:', error);
+        toast.error('Error creating project');
+      }
 
         /*
          * NEW - Also add to URL -

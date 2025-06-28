@@ -1,6 +1,11 @@
 import { MODIFICATIONS_TAG_NAME, WORK_DIR } from '~/utils/constants';
 import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
+import { randomBytes } from 'crypto';
+import { atom } from 'nanostores';
+
+
+export const sessionUid = atom<string | undefined>(undefined);
 
 // Apparently we can'tdo this:
 // export const getCurrentURL = () => window.location.href;
@@ -17,10 +22,12 @@ import { stripIndents } from '~/utils/stripIndent';
 // import { description } from '~/lib/persistence/useChatHistory'
 
 
-import { randomBytes } from 'crypto';
+//session details
+const description = randomBytes(8).toString('hex')  // + `__-__` + `sean`;
+sessionUID.set(description);
 // TODO: I don't think the URL OR the session "description" can be gotten from here, regardless of technique - the react infrastructure is really a trashfire.  
 // So for now , we're just keeping a UID, plus user credentials.  Make sure to add the real credentials!
-const description = randomBytes(8).toString('hex') + `__-__` + `sean`;
+// const description = randomBytes(8).toString('hex') + `__-__` + `sean`;
 
 
 export const getSystemPrompt = (cwd: string = WORK_DIR) => `

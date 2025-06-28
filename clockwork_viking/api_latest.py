@@ -17,6 +17,7 @@ import concurrent.futures
 
 from datetime import datetime, timedelta
 import logging
+import httpx
 
 
 from docx import Document
@@ -25,7 +26,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from skyvern import Skyvern
 # For chatbots
 import requests
-from typing import Optional
 from langchain_openai import ChatOpenAI
 from langchain.agents import (
     AgentExecutor,
@@ -102,17 +102,7 @@ async def get_user_token(authorization: Optional[str] = Header(None)) -> str:
     
     return token
 
-# Parse the user token to get the pieces from it (userId, session UID, password?, user_api_key?)
-# And we also want to do one of the following:
-# - If there is already a prompt with this same userId and prompt_text, then do not make another
-# - If there is not, then create one and the local record. (use UID for project_id, username, prompt_text, and standard evals for now) 
-# TODO:  Also read in user API KEY from the prompts text (default to sean for now).
-# TODO:  make new Empromptu project with the UID for project_id, and user API key.  If it's the first time we've seen this UID, make new project,
-#        then if it's the first time we've seen this prompt_text for this UID, make a a new task with prompt_text, task_name as an LLM-powered summary of the task, etc.
-#        and in either case, keep a local record of what we did (in the DB colletion 'prompts').
-# TODO:  send back UID, userId, user_api_key, whether we made a new project or task or what, etc.
-# TODO:  change the use_prompt function to use the EMP2 distributable, with the stuff returned from this function
-# TODO:  Test that a new project comes with new prompts and that they're instrumented.
+
 async def check_prompt_and_tokens(description, prompt_text):
     try:
         split_tokens = description.split('__-__')
@@ -145,7 +135,15 @@ class ApplyPromptRequest(BaseModel):
     created_object_names: List[str]
     prompt_string: str
     inputs: List[InputSpec]
-    
+
+class RecordProjectRequest(BaseModel):
+    session_uid: str
+    user_api_key: str
+    user_name: str
+    user_id: str
+    project_id: int
+    task_id: Optional[str] = None
+    prompt_string: Optional[str] = None
     
 # Chatbots and Agents
 class CreateAgentRequest(BaseModel):
@@ -195,6 +193,69 @@ class WebhookPayload(BaseModel):
 agents_storage: Dict[str, Any] = {}
 
 
+@app.post("/record_project")
+async def record_project(
+    request: RecordProjectRequest, 
+    user_token: str = Depends(get_user_token)
+):
+    try:
+        # Create the document to upsert
+        project_record = {
+            "session_uid": request.session_uid,
+            "user_api_key": request.user_api_key,
+            "user_name": request.user_name,
+            "user_id": request.user_id,
+            "project_id": request.project_id,
+            "user_token": user_token,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        
+        # Add task_id only if provided
+        if request.task_id is not None:
+            project_record["task_id"] = request.task_id
+            
+        # Add prompt_string only if provided
+        if request.prompt_string is not None:
+            project_record["prompt_string"] = request.prompt_string
+        
+        # Define the filter for upsert (you can adjust this based on your needs)
+        # This example uses project_id and user_id as the unique identifier
+        filter_criteria = {
+            "project_id": request.project_id,
+            "user_id": request.user_id
+        }
+        
+        # Perform upsert operation
+        result = await prompt_collection.update_one(
+            filter_criteria,
+            {
+                "$set": project_record,
+                "$setOnInsert": {"created_at": datetime.utcnow()}
+            },
+            upsert=True
+        )
+        
+        # Return appropriate response
+        if result.upserted_id:
+            return {
+                "message": "Project record created successfully",
+                "project_id": request.project_id,
+                "document_id": str(result.upserted_id),
+                "action": "created"
+            }
+        else:
+            return {
+                "message": "Project record updated successfully",
+                "project_id": request.project_id,
+                "action": "updated"
+            }
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to record project: {str(e)}"
+        )
 
 
 class SimplifiedAgentBuilder:
@@ -1248,7 +1309,189 @@ async def input_data(request: InputDataRequest, user_token: str = Depends(get_us
 
 
 @app.post("/apply_prompt")
-async def apply_prompt(request: ApplyPromptRequest, user_token: str = Depends(get_user_token)):
+async def apply_prompt(
+    request: ApplyPromptRequest, 
+    user_token: str = Depends(get_user_token)
+):
+    try:
+        # First, look for a record with same project_id, user_token, and prompt_string
+        exact_match = await prompt_collection.find_one({
+            "user_token": user_token,
+            "prompt_string": request.prompt_string
+        })
+        
+        if exact_match:
+            # Found exact match - call apply_existing_prompt
+            if "task_id" not in exact_match or exact_match["task_id"] is None:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Found matching record but it has no task_id"
+                )
+            
+            result = await apply_existing_prompt(
+                task_id=exact_match["task_id"],
+                request=request,
+                prompt_record=exact_match
+            )
+            return result
+        
+        else:
+            # No exact match - look for any record with same project_id and user_token
+            project_match = await prompt_collection.find_one({
+                "user_token": user_token
+            })
+            
+            if not project_match:
+                raise HTTPException(
+                    status_code=404, 
+                    detail="No project found for this user_token"
+                )
+            
+            # Generate new task for this prompt
+            task_id = await generate_task_for_prompt(request, project_match)
+            
+            # Create new record with same base info plus new task_id and prompt_string
+            new_record = {
+                **{k: v for k, v in project_match.items() if k != "_id"},  # Copy all fields except _id
+                "task_id": task_id,
+                "prompt_string": request.prompt_string,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+            
+            # Insert the new record
+            insert_result = await prompt_collection.insert_one(new_record)
+            
+            # Get the newly inserted record
+            new_prompt_record = await prompt_collection.find_one({"_id": insert_result.inserted_id})
+            
+            # Call apply_existing_prompt with the new record
+            result = await apply_existing_prompt(
+                task_id=task_id,
+                request=request,
+                prompt_record=new_prompt_record
+            )
+            return result
+            
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to apply prompt: {str(e)}"
+        )
+
+
+async def generate_task_for_prompt(request: ApplyPromptRequest, project_record: dict) -> str:
+    """
+    Generate a new task for the given prompt by calling the analytics API
+    """
+    try:
+        # Extract required fields from project_record
+        user_id = project_record.get("user_id")
+        project_id = project_record.get("project_id")
+        
+        if not user_id or not project_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Missing user_id or project_id in project record"
+            )
+        
+        # Create basic auth header
+        auth_header = user_id # base64.b64encode(f"{user_id}:".encode()).decode()
+        
+        async with httpx.AsyncClient() as client:
+            # Step 1: Create task
+            task_payload = {
+                "name": request.prompt_string[:15],  # First 15 characters
+                "description": "",
+                "projectId": project_id
+            }
+            
+            task_response = await client.post(
+                "https://analytics.empromptu.ai/api/tasks/",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Basic {auth_header}"
+                },
+                json=task_payload
+            )
+            
+            if task_response.status_code != 200:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to create task: {task_response.status_code} - {task_response.text}"
+                )
+            
+            task_data = task_response.json()
+            task_id = task_data.get("task_id")
+            
+            if not task_id:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Task creation did not return a task_id"
+                )
+            
+            # Step 2: Add prompt to task
+            prompt_payload = {
+                "taskId": task_id,
+                "promptText": request.prompt_string,
+                "modelName": "gpt-4.1-mini",
+                "temperature": 0.2,
+                "userId": user_id
+            }
+            
+            prompt_response = await client.post(
+                f"https://analytics.empromptu.ai/api/tasks/{task_id}/prompts/",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Basic {auth_header}"
+                },
+                json=prompt_payload
+            )
+            
+            if prompt_response.status_code != 200:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to add prompt to task: {prompt_response.status_code} - {prompt_response.text}"
+                )
+            
+            # Step 3: Activate global quality evaluation
+            eval_payload = {
+                "isActive": True
+            }
+            
+            eval_response = await client.put(
+                f"https://analytics.empromptu.ai/api/tasks/{task_id}/evals/global_quality/active/",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Basic {auth_header}"
+                },
+                json=eval_payload
+            )
+            
+            if eval_response.status_code != 200:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to activate evaluation: {eval_response.status_code} - {eval_response.text}"
+                )
+            
+            return task_id
+            
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Network error while calling analytics API: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate task for prompt: {str(e)}"
+        )
+
+
+@app.post("/apply_existing_prompt")
+async def apply_prompt(request: ApplyPromptRequest, user_token: str = Depends(get_user_token), prompt_record):
     """
     Apply prompts to data combinations and generate new objects
     """
@@ -1374,141 +1617,6 @@ async def apply_prompt(request: ApplyPromptRequest, user_token: str = Depends(ge
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
-@app.post("/apply_prompt_old")
-async def apply_prompt_old(request: ApplyPromptRequest, user_token: str = Depends(get_user_token)):
-    """
-    Apply prompts to data combinations and generate new objects
-    """
-    try:
-        # Step 1: Get all input objects from database
-        input_objects = {}
-        for input_spec in request.inputs:
-            obj = await collection.find_one({"object_name": input_spec.input_object_name + user_token})
-            if not obj:
-                raise HTTPException(status_code=404, detail=f"Object {input_spec.input_object_name + user_token} not found")
-            input_objects[input_spec.input_object_name + user_token] = obj
-        
-        # Step 2: Process each input according to its mode
-        processed_inputs = {}
-        for input_spec in request.inputs:
-            obj_data = input_objects[input_spec.input_object_name + user_token]
-            print(f"Examining obj_data: {obj_data}")
-            # Ensure this fits the formula - one string as value for each input.
-            for i in range(len(obj_data["data"])):
-                obj_data["data"][i]["value"] = str(obj_data["data"][i]["value"])
-            data_entries = [DataEntry(**entry) for entry in obj_data["data"]]
-            print('BBBBB')
-            if input_spec.mode == "combine_events":
-                # Combine all entries into one
-                combined = combine_events(data_entries)
-                processed_inputs[input_spec.input_object_name + user_token] = [combined]
-            else:
-                # Keep individual entries
-                processed_inputs[input_spec.input_object_name + user_token] = data_entries
-        print('CCCCC')
-        # Step 3: Generate combinations based on modes
-        combinations = []
-        input_names = list(processed_inputs.keys())
-        input_specs_by_name = {spec.input_object_name + user_token: spec for spec in request.inputs}
-        print('DDDD')
-        if len(input_names) == 1:
-            print('EEEEE')
-            # Single input case
-            name = input_names[0]
-            for entry in processed_inputs[name]:
-                combinations.append({name: entry})
-        else:
-            print('FFFF')
-            # Multiple inputs - check if any use match_keys mode
-            has_match_keys = any(input_specs_by_name[name].mode == "match_keys" for name in input_names)
-            
-            if has_match_keys:
-                print('GGGG')
-                # Handle match_keys mode
-                for i, name1 in enumerate(input_names):
-                    for j, name2 in enumerate(input_names[i+1:], i+1):
-                        if (input_specs_by_name[name1].mode == "match_keys" or 
-                            input_specs_by_name[name2].mode == "match_keys"):
-                            matches = get_matching_entries(
-                                processed_inputs[name1], 
-                                processed_inputs[name2]
-                            )
-                            for entry1, entry2 in matches:
-                                combo = {name1: entry1, name2: entry2}
-                                # Add other inputs if they exist
-                                for other_name in input_names:
-                                    if other_name not in [name1, name2]:
-                                        # For now, just take first entry of other inputs
-                                        if processed_inputs[other_name]:
-                                            combo[other_name] = processed_inputs[other_name][0]
-                                combinations.append(combo)
-            else:
-                print('HHHHH')
-                # All permutations for combine_events and use_individually
-                input_lists = [processed_inputs[name] for name in input_names]
-                for combo_tuple in product(*input_lists):
-                    combo_dict = dict(zip(input_names, combo_tuple))
-                    combinations.append(combo_dict)
-        
-        # Step 4: Apply prompts and call OpenAI
-        results_processed = 0
-        print('IIIII')
-        for combo in combinations:
-            # Replace placeholders in prompt
-            filled_prompt = request.prompt_string
-            all_keys = []
-            
-            for input_name, data_entry in combo.items():
-                # NOTE:  Here we figure out when we should use the summary value instead.
-                length_of_main_value = len(str(data_entry.value))
-                value_to_use = str(data_entry.value)
-                if length_of_main_value > 2000:
-                    value_to_use = data_entry.summary_value
-                
-                placeholder = "{" + input_name + "}"
-                filled_prompt = filled_prompt.replace(placeholder, value_to_use)
-                all_keys.extend(data_entry.key_list)
-            print('JJJJ')
-            # Call OpenAI API
-            openai_result = await call_openai_api(filled_prompt, request.created_object_names) #  + user_token)
-            print('KKKK')
-            # Step 5: Store results
-            unique_keys = list(set(all_keys))
-            new_uuid = str(uuid.uuid4())
-            final_keys = unique_keys + [new_uuid]
-            
-            for obj_name in request.created_object_names:
-                print('LLLL')
-                if obj_name in openai_result:
-                    obj_name_plus = obj_name + user_token
-                    # Ensure target object exists
-                    await get_or_create_object(obj_name_plus)
-                    print('MMMM')
-                    print(f"object_neme: {obj_name_plus}\nvalue: {openai_result[obj_name]}")
-                    # Add the result
-                    await add_data_entry(
-                        object_name=obj_name_plus,
-                        key_list=final_keys,
-                        # value=str(openai_result[obj_name])
-                        value=openai_result[obj_name]
-                    )
-                    print('NNNN')
-            
-            results_processed += 1
-        
-        # Note we aren't sending the user_token part of the created_object_names back.
-        print('OOOOO')
-        return JSONResponse(
-            content={
-                "message": f"Successfully processed {results_processed} combinations",
-                "created_objects": request.created_object_names,
-                "combinations_processed": len(combinations)
-            }
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/objects/{object_name}")
 async def get_object(object_name: str, user_token: str = Depends(get_user_token)):
