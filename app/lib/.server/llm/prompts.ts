@@ -1,7 +1,7 @@
 import { MODIFICATIONS_TAG_NAME, WORK_DIR } from '~/utils/constants';
 import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
-import { randomBytes } from 'crypto';
+// import { randomBytes } from 'crypto';
 // import { atom } from 'nanostores';
 import { sessionUid } from '~/lib/stores/session';
 
@@ -17,7 +17,7 @@ const description = sessionUid.get();
 // Apparently we can't do this wither, so.....at least remember to add the username/ID later when we have it.
 // import { description } from '~/lib/persistence/useChatHistory'; // Description of the webcontainer, including project name
 // For now, the user/session info will be the following:
-// a random UID/hex bytes (should be distincy by session, just to avoid collision)
+// a random UID/hex bytes (should be distinct by session, just to avoid collision)
 // The userId ('sean' for now as demo until the RBAC system is added)
 // The string will be in the format:
 // <userId>__-__<UID>
