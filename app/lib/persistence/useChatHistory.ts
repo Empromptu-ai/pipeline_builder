@@ -155,7 +155,7 @@ export function useChatHistory() {
          * url.searchParams.set('desc', firstArtifact.title);
          * window.history.replaceState({}, '', url);
          */
-      }
+      //}
 
       if (initialMessages.length === 0 && !chatId.get()) {
         const nextId = await getNextId(db);
