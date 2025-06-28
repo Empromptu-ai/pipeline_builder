@@ -2,10 +2,14 @@ import { MODIFICATIONS_TAG_NAME, WORK_DIR } from '~/utils/constants';
 import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
 import { randomBytes } from 'crypto';
-import { atom } from 'nanostores';
+// import { atom } from 'nanostores';
+import { sessionUid } from '~/lib/stores/session';
+
+// Then use it exactly as you were:
+const description = sessionUid.get();
 
 
-export const sessionUid = atom<string | undefined>(undefined);
+// export const sessionUid = atom<string | undefined>(undefined);
 
 // Apparently we can'tdo this:
 // export const getCurrentURL = () => window.location.href;
@@ -23,8 +27,8 @@ export const sessionUid = atom<string | undefined>(undefined);
 
 
 //session details
-const description = randomBytes(8).toString('hex')  // + `__-__` + `sean`;
-sessionUid.set(description);
+// const description = randomBytes(8).toString('hex')  // + `__-__` + `sean`;
+// sessionUid.set(description);
 // TODO: I don't think the URL OR the session "description" can be gotten from here, regardless of technique - the react infrastructure is really a trashfire.  
 // So for now , we're just keeping a UID, plus user credentials.  Make sure to add the real credentials!
 // const description = randomBytes(8).toString('hex') + `__-__` + `sean`;

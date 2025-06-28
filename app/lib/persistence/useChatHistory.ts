@@ -6,7 +6,9 @@ import { toast } from 'react-toastify';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { getMessages, getNextId, getUrlId, openDatabase, setMessages } from './db';
 
-import { sessionUid  } from '~/lib/.server/llm/prompts';
+// import { sessionUid  } from '~/lib/.server/llm/prompts';
+import { sessionUid } from '~/lib/stores/session';
+
 
 export const projectId = atom<number | undefined>(undefined);
 
