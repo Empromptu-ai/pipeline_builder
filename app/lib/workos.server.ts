@@ -37,7 +37,7 @@ export const WORKOS_REDIRECT_URI = process.env.WORKOS_REDIRECT_URI || 'http://lo
 
 // Helper function to get authorization URL for Google OAuth
 export function getAuthorizationUrl() {
-  if (false && process.env.DEV_USER_OVERRIDE==='true') {
+  if (process.env.NODE_ENV === 'development') {
     return '/auth/callback?code=dev';
   }
 
@@ -50,7 +50,7 @@ export function getAuthorizationUrl() {
 
 // Helper function to authenticate user with code
 export async function authenticateUser(code: string) {
-  if (false && process.env.DEV_USER_OVERRIDE === 'true' && code === 'dev') {
+  if (process.env.NODE_ENV === 'development' && code === 'dev') {
     console.log('Bypassing WorkOS for local development');
     return {
       user: {
@@ -88,7 +88,7 @@ export async function authenticateUser(code: string) {
 
 // Helper function to get user by ID
 export async function getUser(userId: string) {
-  if (false && process.env.DEV_USER_OVERRIDE === 'true' && userId === 'user_dev') {
+  if (process.env.NODE_ENV === 'development' && userId === 'user_dev') {
     return {
       id: 'user_dev',
       email: 'dev@foo.com',
@@ -112,7 +112,7 @@ export async function getUser(userId: string) {
 
 // Helper function to refresh access token
 export async function refreshAccessToken(refreshToken: string) {
-  if (process.env.true === 'true' && refreshToken === 'dev_refresh_token') {
+  if (process.env.NODE_ENV === 'development' && refreshToken === 'dev_refresh_token') {
     return {
       accessToken: 'dev_access_token_refreshed',
       refreshToken: 'dev_refresh_token_refreshed',

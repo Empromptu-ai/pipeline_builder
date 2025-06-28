@@ -4,6 +4,7 @@ import { atom } from 'nanostores';
 import type { Message } from 'ai';
 import { toast } from 'react-toastify';
 import { workbenchStore } from '~/lib/stores/workbench';
+import { builderContextStore, optimizerContextStore } from '~/lib/stores/appView';
 import { getMessages, getNextId, getUrlId, openDatabase, setMessages } from './db';
 
 export interface ChatHistoryItem {
@@ -48,6 +49,17 @@ export function useChatHistory() {
             setUrlId(storedMessages.urlId);
             description.set(storedMessages.description);
             chatId.set(storedMessages.id);
+
+            // Set the project context for the builder and optimizer
+            builderContextStore.set({
+              projectId: storedMessages.id,
+              projectName: storedMessages.description,
+            });
+            optimizerContextStore.set({
+              ...optimizerContextStore.get(),
+              projectId: storedMessages.id,
+              projectName: storedMessages.description,
+            });
           } else {
             navigate(`/`, { replace: true });
           }
@@ -92,6 +104,12 @@ export function useChatHistory() {
         const nextId = await getNextId(db);
 
         chatId.set(nextId);
+
+        // Create a default task for the new project
+        optimizerContextStore.set({
+          ...optimizerContextStore.get(),
+          taskId: '1', // Default task ID
+        });
 
         if (!urlId) {
           navigateChat(nextId);
