@@ -147,9 +147,6 @@ export function useChatHistory() {
           console.error('API call failed:', response.status, response.statusText);
           toast.error('Failed to create project');
         }
-      } catch (error) {
-        console.error('API call error:', error);
-        toast.error('Error creating project');
       }
 
         /*
