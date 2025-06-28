@@ -1,6 +1,6 @@
 import { useLoaderData, useNavigate } from '@remix-run/react';
 import { useState, useEffect } from 'react';
-// import { atom } from 'nanostores';
+import { atom } from 'nanostores';
 import type { Message } from 'ai';
 import { toast } from 'react-toastify';
 import { workbenchStore } from '~/lib/stores/workbench';
