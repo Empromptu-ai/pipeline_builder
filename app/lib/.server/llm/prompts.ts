@@ -24,7 +24,7 @@ export const sessionUid = atom<string | undefined>(undefined);
 
 //session details
 const description = randomBytes(8).toString('hex')  // + `__-__` + `sean`;
-sessionUID.set(description);
+sessionUid.set(description);
 // TODO: I don't think the URL OR the session "description" can be gotten from here, regardless of technique - the react infrastructure is really a trashfire.  
 // So for now , we're just keeping a UID, plus user credentials.  Make sure to add the real credentials!
 // const description = randomBytes(8).toString('hex') + `__-__` + `sean`;
