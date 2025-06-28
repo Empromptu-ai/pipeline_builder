@@ -1,4 +1,5 @@
 import type { Message } from 'ai';
+import { Loader, User } from 'lucide-react';
 import React from 'react';
 import { classNames } from '~/utils/classNames';
 import { AssistantMessage } from './AssistantMessage';
@@ -35,7 +36,7 @@ export const Messages = React.forwardRef<HTMLDivElement, MessagesProps>((props: 
               >
                 {isUserMessage && (
                   <div className="flex items-center justify-center w-[34px] h-[34px] overflow-hidden bg-white text-gray-600 rounded-full shrink-0 self-start">
-                    <div className="i-ph:user-fill text-xl"></div>
+                    <User className="text-xl" />
                   </div>
                 )}
                 <div className="grid grid-col-1 w-full">
@@ -46,7 +47,7 @@ export const Messages = React.forwardRef<HTMLDivElement, MessagesProps>((props: 
           })
         : null}
       {isStreaming && (
-        <div className="text-center w-full text-bolt-elements-textSecondary i-svg-spinners:3-dots-fade text-4xl mt-4"></div>
+        <Loader className="animate-spin text-center w-full text-bolt-elements-textSecondary text-4xl mt-4" />
       )}
     </div>
   );

@@ -72,21 +72,21 @@ export function DeployButtons() {
       <button
         onClick={handleDownload}
         disabled={isDownloading}
-        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
+        className="px-4 py-2 bg-bolt-elements-button-primary-background text-bolt-elements-button-primary-text rounded-md hover:bg-bolt-elements-button-primary-backgroundHover disabled:bg-bolt-elements-button-primary-backgroundDisabled"
       >
         {isDownloading ? 'Downloading...' : 'Download Project'}
       </button>
       <button
         onClick={handleDeploy}
         disabled={isDeploying}
-        className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 disabled:bg-gray-600"
+        className="px-4 py-2 bg-bolt-elements-button-secondary-background text-bolt-elements-button-secondary-text rounded-md hover:bg-bolt-elements-button-secondary-backgroundHover disabled:bg-bolt-elements-button-secondary-backgroundDisabled"
       >
         {isDeploying ? 'Deploying...' : 'Deploy to GitHub'}
       </button>
       <button
         onClick={handleNetlifyDeploy}
         disabled={isDeployingNetlify}
-        className="px-4 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-md hover:from-teal-700 hover:to-teal-800 disabled:from-teal-400 disabled:to-teal-500 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+        className="px-4 py-2 bg-bolt-elements-button-primary-background text-bolt-elements-button-primary-text rounded-md hover:bg-bolt-elements-button-primary-backgroundHover disabled:bg-bolt-elements-button-primary-backgroundDisabled transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
       >
         {isDeployingNetlify ? (
           <span className="flex items-center space-x-2">

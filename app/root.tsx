@@ -4,6 +4,7 @@ import { Links, Meta, Outlet, Scripts, ScrollRestoration } from '@remix-run/reac
 import tailwindReset from '@unocss/reset/tailwind-compat.css?url';
 import { themeStore } from './lib/stores/theme';
 import { stripIndents } from './utils/stripIndent';
+import tailwindStyles from './styles/tailwind.css?url';
 import { createHead } from 'remix-island';
 import { useEffect } from 'react';
 
@@ -20,9 +21,10 @@ export const links: LinksFunction = () => [
     type: 'image/svg+xml',
   },
   { rel: 'stylesheet', href: reactToastifyStyles },
-  { rel: 'stylesheet', href: tailwindReset },
+  { rel: 'stylesheet', href: tailwindStyles },
   { rel: 'stylesheet', href: globalStyles },
   { rel: 'stylesheet', href: xtermStyles },
+  { rel: 'stylesheet', href: tailwindReset },
   {
     rel: 'preconnect',
     href: 'https://fonts.googleapis.com',

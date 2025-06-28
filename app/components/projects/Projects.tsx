@@ -1,14 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useNavigate } from '@remix-run/react';
-import { useStore } from '@nanostores/react';
-import { themeStore } from '~/lib/stores/theme';
 import type { ChatHistoryItem } from '~/lib/persistence';
 
 export function Projects() {
   const [list, setList] = useState<ChatHistoryItem[]>([]);
   const navigate = useNavigate();
-  const theme = useStore(themeStore);
 
   useEffect(() => {
     // Dynamically import persistence logic only on the client
@@ -39,23 +36,17 @@ export function Projects() {
   };
 
   return (
-    <div className={`p-6 min-h-full transition-colors ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
-      <h1 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>Projects</h1>
+    <div className="p-6 min-h-full transition-colors bg-bolt-elements-background-depth-2">
+      <h1 className="text-2xl font-bold mb-4 text-bolt-elements-textPrimary">Projects</h1>
       <div className="space-y-2">
         {list.map((item) => (
           <button
             key={item.id}
             onClick={() => handleProjectSelect(item)}
-            className={`w-full text-left p-4 border rounded-lg transition-colors ${
-              theme === 'dark'
-                ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-white'
-                : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-900'
-            }`}
+            className="w-full text-left p-4 border rounded-lg transition-colors border-bolt-elements-borderColor bg-bolt-elements-background-depth-1 hover:bg-bolt-elements-background-depth-3 text-bolt-elements-textPrimary"
           >
-            <div className={`font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
-              {item.description}
-            </div>
-            <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            <div className="font-semibold text-bolt-elements-textPrimary">{item.description}</div>
+            <div className="text-sm text-bolt-elements-textSecondary">
               Last updated: {new Date(item.timestamp).toLocaleDateString()}
             </div>
           </button>

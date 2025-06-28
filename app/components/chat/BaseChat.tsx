@@ -1,4 +1,5 @@
 import type { Message } from 'ai';
+import { ArrowDownLeft, Loader, Sparkles } from 'lucide-react';
 import React, { type RefCallback } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { IconButton } from '~/components/ui/IconButton';
@@ -161,12 +162,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       >
                         {enhancingPrompt ? (
                           <>
-                            <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-xl"></div>
+                            <Loader className="animate-spin text-bolt-elements-loader-progress text-xl" />
                             <div className="ml-1.5">Enhancing prompt...</div>
                           </>
                         ) : (
                           <>
-                            <div className="i-bolt:stars text-xl"></div>
+                            <Sparkles className="text-xl" />
                             {promptEnhanced && <div className="ml-1.5">Prompt enhanced</div>}
                           </>
                         )}
@@ -195,7 +196,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         className="group flex items-center w-full gap-2 justify-center bg-transparent text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary transition-theme"
                       >
                         {examplePrompt.text}
-                        <div className="i-ph:arrow-bend-down-left" />
+                        <ArrowDownLeft />
                       </button>
                     );
                   })}

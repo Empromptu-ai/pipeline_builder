@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useRef, useState } from 'react';
 import { type ChatHistoryItem } from '~/lib/persistence';
+import { Trash } from 'lucide-react';
 
 interface HistoryItemProps {
   item: ChatHistoryItem;
@@ -47,13 +48,15 @@ export function HistoryItem({ item, onDelete }: HistoryItemProps) {
             <div className="flex items-center p-1 text-bolt-elements-textSecondary hover:text-bolt-elements-item-contentDanger">
               <Dialog.Trigger asChild>
                 <button
-                  className="i-ph:trash scale-110"
+                  title="Delete chat"
                   onClick={(event) => {
                     // we prevent the default so we don't trigger the anchor above
                     event.preventDefault();
                     onDelete?.(event);
                   }}
-                />
+                >
+                  <Trash className="w-4 h-4" />
+                </button>
               </Dialog.Trigger>
             </div>
           )}

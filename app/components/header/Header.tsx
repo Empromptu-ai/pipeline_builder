@@ -6,6 +6,7 @@ import { classNames } from '~/utils/classNames';
 import { HeaderActionButtons } from './HeaderActionButtons.client';
 import { ChatDescription } from '~/lib/persistence/ChatDescription.client';
 import { Form } from '@remix-run/react';
+import { Sidebar } from 'lucide-react';
 
 export function LogoutButton() {
   return (
@@ -22,7 +23,7 @@ export function LogoutButton() {
 
 function AppSwitcher() {
   const currentView = useStore(appViewStore);
-  
+
   const handleViewChange = (view: AppView) => {
     appViewStore.set(view);
   };
@@ -31,25 +32,19 @@ function AppSwitcher() {
     <div className="flex items-center bg-gray-100 rounded-lg p-1">
       <button
         onClick={() => handleViewChange('builder')}
-        className={classNames(
-          'px-4 py-2 text-sm font-medium rounded-md transition-colors',
-          {
-            'bg-white text-gray-900 shadow-sm': currentView === 'builder',
-            'text-gray-600 hover:text-gray-900': currentView !== 'builder',
-          }
-        )}
+        className={classNames('px-4 py-2 text-sm font-medium rounded-md transition-colors', {
+          'bg-white text-gray-900 shadow-sm': currentView === 'builder',
+          'text-gray-600 hover:text-gray-900': currentView !== 'builder',
+        })}
       >
         Builder
       </button>
       <button
         onClick={() => handleViewChange('optimizer')}
-        className={classNames(
-          'px-4 py-2 text-sm font-medium rounded-md transition-colors',
-          {
-            'bg-white text-gray-900 shadow-sm': currentView === 'optimizer',
-            'text-gray-600 hover:text-gray-900': currentView !== 'optimizer',
-          }
-        )}
+        className={classNames('px-4 py-2 text-sm font-medium rounded-md transition-colors', {
+          'bg-white text-gray-900 shadow-sm': currentView === 'optimizer',
+          'text-gray-600 hover:text-gray-900': currentView !== 'optimizer',
+        })}
       >
         Optimizer
       </button>
@@ -59,7 +54,7 @@ function AppSwitcher() {
 
 export function Header() {
   const chat = useStore(chatStore);
-  
+
   return (
     <header
       className={classNames(
@@ -72,16 +67,16 @@ export function Header() {
     >
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 text-bolt-elements-textPrimary cursor-pointer">
-          <div className="i-ph:sidebar-simple-duotone text-xl" />
+          <Sidebar className="w-5 h-5" />
           <a href="/" className="text-2xl font-semibold text-accent flex items-center">
             Empromptu
           </a>
         </div>
         <LogoutButton />
-        
+
         {/* App Switcher */}
         <AppSwitcher />
-        
+
         <span className="flex-1 px-4 truncate text-center text-bolt-elements-textPrimary">
           <ClientOnly>{() => <ChatDescription />}</ClientOnly>
         </span>
@@ -99,27 +94,12 @@ export function Header() {
   );
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // import { useStore } from '@nanostores/react';
 // import { ClientOnly } from 'remix-utils/client-only';
 // import { chatStore } from '~/lib/stores/chat';
 // import { classNames } from '~/utils/classNames';
 // import { HeaderActionButtons } from './HeaderActionButtons.client';
 // import { ChatDescription } from '~/lib/persistence/ChatDescription.client';
-
 
 // import { Form } from '@remix-run/react';
 
@@ -154,7 +134,7 @@ export function Header() {
 //           <div className="i-ph:sidebar-simple-duotone text-xl" />
 //           <a href="/" className="text-2xl font-semibold text-accent flex items-center">
 //             {/* <span className="i-bolt:logo-text?mask w-[46px] inline-block" /> */}
-//             Empromptu 
+//             Empromptu
 //           </a>
 //         </div>
 //         <LogoutButton />

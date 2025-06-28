@@ -2,6 +2,7 @@ import { useStore } from '@nanostores/react';
 import { chatStore } from '~/lib/stores/chat';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { classNames } from '~/utils/classNames';
+import { MessageSquare, Code } from 'lucide-react';
 
 interface HeaderActionButtonsProps {}
 
@@ -23,7 +24,7 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
             }
           }}
         >
-          <div className="i-bolt:chat text-sm" />
+          <MessageSquare className="w-4 h-4" />
         </Button>
         <div className="w-[1px] bg-bolt-elements-borderColor" />
         <Button
@@ -36,7 +37,7 @@ export function HeaderActionButtons({}: HeaderActionButtonsProps) {
             workbenchStore.showWorkbench.set(!showWorkbench);
           }}
         >
-          <div className="i-ph:code-bold" />
+          <Code className="w-4 h-4" />
         </Button>
       </div>
     </div>
@@ -57,8 +58,7 @@ function Button({ active = false, disabled = false, children, onClick }: ButtonP
         'bg-bolt-elements-item-backgroundDefault hover:bg-bolt-elements-item-backgroundActive text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary':
           !active,
         'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent': active && !disabled,
-        'bg-bolt-elements-item-backgroundDefault text-alpha-gray-20 dark:text-alpha-white-20 cursor-not-allowed':
-          disabled,
+        'bg-bolt-elements-item-backgroundDefault text-bolt-elements-textTertiary cursor-not-allowed': disabled,
       })}
       onClick={onClick}
     >

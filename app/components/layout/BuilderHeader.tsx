@@ -31,10 +31,15 @@ export function BuilderHeader() {
         <ThemeSwitch />
         {projectId && (
           <div className="flex items-center space-x-2">
-            <Button onClick={handleOptimizeClick} className="bg-purple-600 hover:bg-purple-700 text-white">
+            <Button
+              onClick={handleOptimizeClick}
+              className="bg-bolt-elements-button-secondary-background hover:bg-bolt-elements-button-secondary-backgroundHover text-bolt-elements-button-secondary-text"
+            >
               Optimize
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">Publish / Re-build</Button>
+            <Button className="bg-bolt-elements-button-primary-background hover:bg-bolt-elements-button-primary-backgroundHover text-bolt-elements-button-primary-text">
+              Publish / Re-build
+            </Button>
             <DeployButtons />
           </div>
         )}
