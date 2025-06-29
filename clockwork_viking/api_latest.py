@@ -195,10 +195,16 @@ agents_storage: Dict[str, Any] = {}
 
 @app.post("/record_project")
 async def record_project(
-    request: RecordProjectRequest, 
+    request: RecordProjectRequest,
     user_token: str = Depends(get_user_token)
 ):
+    print(f"🔍 Starting record_project function")
+    print(f"📥 Received request: {request}")
+    print(f"🔑 User token: {user_token}")
+    
     try:
+        print(f"📝 Creating project record document...")
+        
         # Create the document to upsert
         project_record = {
             "session_uid": request.session_uid,
@@ -211,13 +217,23 @@ async def record_project(
             "updated_at": datetime.utcnow()
         }
         
+        print(f"📋 Base project record created: {project_record}")
+        
         # Add task_id only if provided
         if request.task_id is not None:
+            print(f"➕ Adding task_id to record: {request.task_id}")
             project_record["task_id"] = request.task_id
+        else:
+            print(f"⏭️ No task_id provided, skipping")
             
         # Add prompt_string only if provided
         if request.prompt_string is not None:
+            print(f"➕ Adding prompt_string to record: {request.prompt_string}")
             project_record["prompt_string"] = request.prompt_string
+        else:
+            print(f"⏭️ No prompt_string provided, skipping")
+            
+        print(f"📄 Final project record: {project_record}")
         
         # Define the filter for upsert (you can adjust this based on your needs)
         # This example uses project_id and user_id as the unique identifier
@@ -225,6 +241,9 @@ async def record_project(
             "project_id": request.project_id,
             "user_id": request.user_id
         }
+        
+        print(f"🔍 Filter criteria for upsert: {filter_criteria}")
+        print(f"🚀 Performing upsert operation...")
         
         # Perform upsert operation
         result = await prompt_collection.update_one(
@@ -236,27 +255,41 @@ async def record_project(
             upsert=True
         )
         
+        print(f"✅ Upsert operation completed")
+        print(f"📊 Result: {result}")
+        print(f"🆔 Upserted ID: {result.upserted_id}")
+        print(f"🔢 Modified count: {result.modified_count}")
+        print(f"🔢 Matched count: {result.matched_count}")
+        
         # Return appropriate response
         if result.upserted_id:
-            return {
+            print(f"🆕 New document created with ID: {result.upserted_id}")
+            response = {
                 "message": "Project record created successfully",
                 "project_id": request.project_id,
                 "document_id": str(result.upserted_id),
                 "action": "created"
             }
+            print(f"📤 Returning creation response: {response}")
+            return response
         else:
-            return {
+            print(f"🔄 Existing document updated")
+            response = {
                 "message": "Project record updated successfully",
                 "project_id": request.project_id,
                 "action": "updated"
             }
+            print(f"📤 Returning update response: {response}")
+            return response
             
     except Exception as e:
+        print(f"❌ Exception occurred: {str(e)}")
+        print(f"❌ Exception type: {type(e)}")
+        print(f"🚨 Raising HTTPException...")
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"Failed to record project: {str(e)}"
         )
-
 
 class SimplifiedAgentBuilder:
     def __init__(self, llm_model="gpt-4.1-mini", base_url="http://localhost:5000"):
