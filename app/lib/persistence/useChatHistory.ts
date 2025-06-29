@@ -123,7 +123,7 @@ export function useChatHistory() {
         console.log('got sessionId:', currentsessionUid);
 
         // Call project/user logger API
-        const response = await fetch('https://staging.empromptu.ai/api/record_project/', {
+        const response = await fetch('https://staging.impromptu-labs.com/api_tools/record_project/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
