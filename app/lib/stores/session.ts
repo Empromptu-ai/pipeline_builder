@@ -27,10 +27,20 @@
 // }
 
 // this should just set once and then when we want to reset it
+// import { atom } from 'nanostores';
+
+// export function generateUID() {
+//   return Math.random().toString(36).substring(2) + Date.now().toString(36);
+// }
+
+// export const sessionUid = atom<string>(generateUID());
+
+
+
 import { atom } from 'nanostores';
 
-export function generateUID() {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
-}
+export const sessionUid = atom<string | null>(null);
 
-export const sessionUid = atom<string>(generateUID());
+export function setSessionUid(uid: string) {
+  sessionUid.set(uid);
+}

@@ -7,6 +7,7 @@ import { Chat } from '~/components/chat/Chat.client';
 import { Header } from '~/components/header/Header';
 import { appViewStore } from '~/lib/stores/appView';
 import { requireUserSession, type UserSession } from '~/utils/session.server';
+import { setSessionUid } from '~/lib/stores/session';
 // import { getUserSecret, storeApiResponseAsSecrets } from '~/lib/secrets.server';
 
 export const meta: MetaFunction = () => {
@@ -23,9 +24,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
   // Example: Get some stored secrets for the user
   // const apiKey = await getUserSecret(userSession.userId, 'api_key');
   // const customSetting = await getUserSecret(userSession.userId, 'custom_setting');
+
+  // Generate the session UID here (for app disambiguation)
+  const sessionUid = Math.random().toString(36).substring(2) + Date.now().toString(36);
   
   return json({
     user: userSession,
+    sessionUid
     // userSecrets: {
     //  apiKey,
     //  customSetting,
@@ -56,7 +61,12 @@ function OptimizerView({ userSession }: OptimizerViewProps) {
 }
 
 export default function Index() {
-  const { user, userSecrets } = useLoaderData<typeof loader>();
+  const { user, sessionUid } = useLoaderData<typeof loader>();
+  // Set it once when the component mounts
+  useEffect(() => {
+    setSessionUid(sessionUid);
+  }, [sessionUid]);
+  console.log('Back from the loader, sessionUid is:', sessionUid);
   console.log('Back from the loader, user is:', user.userId);
   console.log('Back from the loader, appViewStore is:', appViewStore);
   const currentView = useStore(appViewStore);

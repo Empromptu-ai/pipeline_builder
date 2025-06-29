@@ -3,10 +3,11 @@ import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
 // import { randomBytes } from 'crypto';
 // import { atom } from 'nanostores';
-import { sessionUid } from '~/lib/stores/session';
 
+import { sessionUid } from '~/lib/stores/session';
 const description = sessionUid.get();
-console.log('got sessionId at the top of prompts declaration file:', description);
+// console.log('got sessionId at the top of prompts declaration file:', description);
+
 
 
 // export const sessionUid = atom<string | undefined>(undefined);

@@ -239,7 +239,7 @@ function streamTextWithYourAgent(messages: Messages, env: Env, options?: Streami
 
 function getYourAgentSystemPrompt(): string {
   //return API_CHATBOT_PROMPT; //(sessionId);
-  return getApiChatbotPrompt(); // Call the function to get new value
+  return getApiChatbotPrompt(); // should include current sessionId
 }
 
 function checkIfAlreadyTransitioned(messages: Messages): boolean {
