@@ -13,6 +13,12 @@ export function generateUID() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
+// export const sessionUid = atom<string | undefined>(undefined);
+// const description = generateUID();
+// sessionUid.set(description);
+
 export const sessionUid = atom<string | undefined>(undefined);
-const description = generateUID();
-sessionUid.set(description);
+// Only set if it's currently undefined - so just an initial setting here
+if (sessionUid.get() === undefined) {
+  sessionUid.set(generateUID());
+}
