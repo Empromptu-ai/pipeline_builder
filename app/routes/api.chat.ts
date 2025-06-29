@@ -1,6 +1,6 @@
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { MAX_RESPONSE_SEGMENTS, MAX_TOKENS } from '~/lib/.server/llm/constants';
-import { CONTINUE_PROMPT, API_CHATBOT_PROMPT,  INJECTED_PROMPT_1 , INJECTED_PROMPT_2 } from '~/lib/.server/llm/prompts';
+import { CONTINUE_PROMPT, API_CHATBOT_PROMPT,  INJECTED_PROMPT_1 , INJECTED_PROMPT_2, getApiChatbotPrompt } from '~/lib/.server/llm/prompts';
 import { streamText, type Messages, type StreamingOptions } from '~/lib/.server/llm/stream-text';
 import SwitchableStream from '~/lib/.server/llm/switchable-stream';
 import { streamText as _streamText, convertToCoreMessages } from 'ai';
@@ -238,8 +238,8 @@ function streamTextWithYourAgent(messages: Messages, env: Env, options?: Streami
 }
 
 function getYourAgentSystemPrompt(): string {
-  // return API_CHATBOT_PROMPT;
-  return API_CHATBOT_PROMPT; //(sessionId);
+  //return API_CHATBOT_PROMPT; //(sessionId);
+  return getApiChatbotPrompt(); // Call the function to get new value
 }
 
 function checkIfAlreadyTransitioned(messages: Messages): boolean {

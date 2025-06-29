@@ -9,7 +9,7 @@
 
 import { atom } from 'nanostores';
 
-function generateUID() {
+export function generateUID() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
