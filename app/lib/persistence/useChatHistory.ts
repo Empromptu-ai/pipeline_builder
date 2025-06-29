@@ -123,7 +123,7 @@ export function useChatHistory() {
         console.log('got sessionId:', currentsessionUid);
 
         // Call project/user logger API
-        const response = await fetch('https://staging.impromptu-labs.com/api_tools/record_project/', {
+        const response_rp = await fetch('https://staging.impromptu-labs.com/api_tools/record_project/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -139,14 +139,14 @@ export function useChatHistory() {
           }),
         });
 
-        if (response.ok) {
-          const result = await response.json();
+        if (response_rp.ok) {
+          const result_rp = await response_rp.json();
           // Store the project_id from the returned array
-          if (result && result.length > 0) {
-            console.log('Project and user details recorded:', result);
+          if (result_rp && result_rp.length > 0) {
+            console.log('Project and user details recorded:', result_rp);
           }
         } else {
-          console.error('API call failed:', response.status, response.statusText);
+          console.error('API call failed:', response_rp.status, response_rp.statusText);
           toast.error('Failed to create project');
         }
       }
