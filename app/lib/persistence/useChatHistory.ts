@@ -118,8 +118,9 @@ export function useChatHistory() {
           console.error('API call error:', error);
           toast.error('Error creating project');
         }
-
+        console.log('getting sessionId');
         const currentsessionUid = sessionUid.get();
+        console.log('got sessionId:', currentsessionUid);
 
         // Call project/user logger API
         const response = await fetch('https://staging.empromptu.ai/api/record_project/', {
