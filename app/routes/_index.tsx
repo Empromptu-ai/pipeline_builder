@@ -8,6 +8,7 @@ import { Header } from '~/components/header/Header';
 import { appViewStore } from '~/lib/stores/appView';
 import { requireUserSession, type UserSession } from '~/utils/session.server';
 import { setSessionUid } from '~/lib/stores/session';
+import { useEffect } from "react"; 
 // import { getUserSecret, storeApiResponseAsSecrets } from '~/lib/secrets.server';
 
 export const meta: MetaFunction = () => {
