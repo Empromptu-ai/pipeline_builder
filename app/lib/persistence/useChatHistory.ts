@@ -131,7 +131,7 @@ export function useChatHistory() {
           },
           body: JSON.stringify({
             project_name: firstArtifact.title,
-            project_id: result[0].project_id,
+            project_id: projectId.get(),
             session_uid: currentsessionUid,
             user_api_key: user.analyticsApiKey,
             user_name: user.analyticsUsername,
