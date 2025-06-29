@@ -6,6 +6,7 @@ import { stripIndents } from '~/utils/stripIndent';
 import { sessionUid } from '~/lib/stores/session';
 
 const description = sessionUid.get();
+console.log('got sessionId at the top of prompts declaration file:', description);
 
 
 // export const sessionUid = atom<string | undefined>(undefined);
@@ -260,6 +261,7 @@ export const CONTINUE_PROMPT = stripIndents`
 
 export function getApiChatbotPrompt() {
   const description = sessionUid.get();
+  console.log('got sessionId in getApiChatbotPrompt:', description);
   return stripIndents`
   You are an AI assistant that helps users solve problems using a powerful data pipeline API system. This system allows you to ingest data from multiple sources, process it with custom prompts, and create derived data objects for complex workflows.
   Your task:
@@ -818,7 +820,7 @@ Be sure that user-input windows are declared outside of main event loops to avoi
 Please ensure that all text and windows have good contrast against their background.
 
 Also please review the API spec and be absolutely sure that you are calling those functions with the appropriate data formats, for example ensuring that you are sending object_name values, encapsulating input correctly in json, and using the exact function endpoints as they were defined.
-As a reminder, all API endpoints are at https://staging.impromptu-labs.com/api_tools ,  and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}".
+As a reminder, all API endpoints are at https://staging.impromptu-labs.com/api_tools .
 
 And remember the actual API functions you have access to, and what they expect:
 
