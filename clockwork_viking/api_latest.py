@@ -1310,76 +1310,200 @@ async def input_data(request: InputDataRequest, user_token: str = Depends(get_us
 
 @app.post("/apply_prompt")
 async def apply_prompt(
-    request: ApplyPromptRequest, 
+    request: ApplyPromptRequest,
     user_token: str = Depends(get_user_token)
 ):
+    print(f"[DEBUG] Starting apply_prompt function")
+    print(f"[DEBUG] Request: {request}")
+    print(f"[DEBUG] User token: {user_token}")
+    
     try:
+        print(f"[DEBUG] Entering try block")
+        
         # First, look for a record with same project_id, user_token, and prompt_string
+        print(f"[DEBUG] Looking for exact match in prompt_collection")
+        print(f"[DEBUG] Search criteria: user_token={user_token}, prompt_string={request.prompt_string}")
+        
         exact_match = await prompt_collection.find_one({
             "user_token": user_token,
             "prompt_string": request.prompt_string
         })
         
+        print(f"[DEBUG] Exact match result: {exact_match}")
+        
         if exact_match:
+            print(f"[DEBUG] Found exact match - proceeding with existing prompt")
+            
             # Found exact match - call apply_existing_prompt
             if "task_id" not in exact_match or exact_match["task_id"] is None:
+                print(f"[DEBUG] ERROR: Exact match found but no task_id present")
                 raise HTTPException(
-                    status_code=400, 
+                    status_code=400,
                     detail="Found matching record but it has no task_id"
                 )
+            
+            print(f"[DEBUG] Exact match has valid task_id: {exact_match['task_id']}")
+            print(f"[DEBUG] Calling apply_existing_prompt with task_id={exact_match['task_id']}")
             
             result = await apply_existing_prompt(
                 task_id=exact_match["task_id"],
                 request=request,
                 prompt_record=exact_match
             )
+            
+            print(f"[DEBUG] apply_existing_prompt returned: {result}")
+            print(f"[DEBUG] Returning result from exact match path")
             return result
-        
         else:
+            print(f"[DEBUG] No exact match found - looking for project match")
+            
             # No exact match - look for any record with same project_id and user_token
+            print(f"[DEBUG] Searching for any record with user_token: {user_token}")
+            
             project_match = await prompt_collection.find_one({
                 "user_token": user_token
             })
             
+            print(f"[DEBUG] Project match result: {project_match}")
+            
             if not project_match:
+                print(f"[DEBUG] ERROR: No project found for user_token")
                 raise HTTPException(
-                    status_code=404, 
+                    status_code=404,
                     detail="No project found for this user_token"
                 )
             
+            print(f"[DEBUG] Found project match - generating new task")
+            
             # Generate new task for this prompt
+            print(f"[DEBUG] Calling generate_task_for_prompt")
             task_id = await generate_task_for_prompt(request, project_match)
+            print(f"[DEBUG] Generated new task_id: {task_id}")
             
             # Create new record with same base info plus new task_id and prompt_string
+            print(f"[DEBUG] Creating new record based on project match")
+            print(f"[DEBUG] Copying fields from project_match (excluding _id)")
+            
             new_record = {
-                **{k: v for k, v in project_match.items() if k != "_id"},  # Copy all fields except _id
+                **{k: v for k, v in project_match.items() if k != "_id"}, # Copy all fields except _id
                 "task_id": task_id,
                 "prompt_string": request.prompt_string,
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             }
             
+            print(f"[DEBUG] New record created: {new_record}")
+            
             # Insert the new record
+            print(f"[DEBUG] Inserting new record into prompt_collection")
             insert_result = await prompt_collection.insert_one(new_record)
+            print(f"[DEBUG] Insert result: {insert_result}")
+            print(f"[DEBUG] Inserted record ID: {insert_result.inserted_id}")
             
             # Get the newly inserted record
+            print(f"[DEBUG] Retrieving newly inserted record")
             new_prompt_record = await prompt_collection.find_one({"_id": insert_result.inserted_id})
+            print(f"[DEBUG] Retrieved new prompt record: {new_prompt_record}")
             
             # Call apply_existing_prompt with the new record
+            print(f"[DEBUG] Calling apply_existing_prompt with new record")
+            print(f"[DEBUG] Parameters: task_id={task_id}, request={request}")
+            
             result = await apply_existing_prompt(
                 task_id=task_id,
                 request=request,
                 prompt_record=new_prompt_record
             )
+            
+            print(f"[DEBUG] apply_existing_prompt returned: {result}")
+            print(f"[DEBUG] Returning result from new record path")
             return result
             
     except HTTPException:
-        raise  # Re-raise HTTP exceptions as-is
+        print(f"[DEBUG] Caught HTTPException - re-raising as-is")
+        raise # Re-raise HTTP exceptions as-is
     except Exception as e:
+        print(f"[DEBUG] Caught unexpected exception: {type(e).__name__}: {str(e)}")
+        print(f"[DEBUG] Raising HTTPException with 500 status")
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"Failed to apply prompt: {str(e)}"
         )
+
+
+
+
+# async def apply_prompt(
+#     request: ApplyPromptRequest, 
+#     user_token: str = Depends(get_user_token)
+# ):
+#     try:
+#         # First, look for a record with same project_id, user_token, and prompt_string
+#         exact_match = await prompt_collection.find_one({
+#             "user_token": user_token,
+#             "prompt_string": request.prompt_string
+#         })
+        
+#         if exact_match:
+#             # Found exact match - call apply_existing_prompt
+#             if "task_id" not in exact_match or exact_match["task_id"] is None:
+#                 raise HTTPException(
+#                     status_code=400, 
+#                     detail="Found matching record but it has no task_id"
+#                 )
+            
+#             result = await apply_existing_prompt(
+#                 task_id=exact_match["task_id"],
+#                 request=request,
+#                 prompt_record=exact_match
+#             )
+#             return result
+        
+#         else:
+#             # No exact match - look for any record with same project_id and user_token
+#             project_match = await prompt_collection.find_one({
+#                 "user_token": user_token
+#             })
+            
+#             if not project_match:
+#                 raise HTTPException(
+#                     status_code=404, 
+#                     detail="No project found for this user_token"
+#                 )
+            
+#             # Generate new task for this prompt
+#             task_id = await generate_task_for_prompt(request, project_match)
+            
+#             # Create new record with same base info plus new task_id and prompt_string
+#             new_record = {
+#                 **{k: v for k, v in project_match.items() if k != "_id"},  # Copy all fields except _id
+#                 "task_id": task_id,
+#                 "prompt_string": request.prompt_string,
+#                 "created_at": datetime.utcnow(),
+#                 "updated_at": datetime.utcnow()
+#             }
+            
+#             # Insert the new record
+#             insert_result = await prompt_collection.insert_one(new_record)
+            
+#             # Get the newly inserted record
+#             new_prompt_record = await prompt_collection.find_one({"_id": insert_result.inserted_id})
+            
+#             # Call apply_existing_prompt with the new record
+#             result = await apply_existing_prompt(
+#                 task_id=task_id,
+#                 request=request,
+#                 prompt_record=new_prompt_record
+#             )
+#             return result
+            
+#     except HTTPException:
+#         raise  # Re-raise HTTP exceptions as-is
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=500, 
+#             detail=f"Failed to apply prompt: {str(e)}"
+#         )
 
 
 async def generate_task_for_prompt(request: ApplyPromptRequest, project_record: dict) -> str:
@@ -1491,7 +1615,7 @@ async def generate_task_for_prompt(request: ApplyPromptRequest, project_record: 
 
 
 @app.post("/apply_existing_prompt")
-async def apply_prompt(request: ApplyPromptRequest, user_token: str = Depends(get_user_token), prompt_record=None):
+async def apply_existing_prompt(request: ApplyPromptRequest, user_token: str = Depends(get_user_token), prompt_record=None):
     """
     Apply prompts to data combinations and generate new objects
     """
