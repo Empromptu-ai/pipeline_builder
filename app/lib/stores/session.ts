@@ -7,18 +7,30 @@
 // sessionUid.set(description);
 
 
+// import { atom } from 'nanostores';
+
+// export function generateUID() {
+//   return Math.random().toString(36).substring(2) + Date.now().toString(36);
+// }
+
+// // export const sessionUid = atom<string | undefined>(undefined);
+// // const description = generateUID();
+// // sessionUid.set(description);
+
+// export const sessionUid = atom<string | undefined>(undefined);
+
+
+// // Only set if it's currently undefined - so just an initial setting here
+// export const sessionUid = atom<string>(generateUID());
+// if (sessionUid.get() === undefined) {
+//   sessionUid.set(generateUID());
+// }
+
+// this should just set once and then when we want to reset it
 import { atom } from 'nanostores';
 
 export function generateUID() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-// export const sessionUid = atom<string | undefined>(undefined);
-// const description = generateUID();
-// sessionUid.set(description);
-
-export const sessionUid = atom<string | undefined>(undefined);
-// Only set if it's currently undefined - so just an initial setting here
-if (sessionUid.get() === undefined) {
-  sessionUid.set(generateUID());
-}
+export const sessionUid = atom<string>(generateUID());
