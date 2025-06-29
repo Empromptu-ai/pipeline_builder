@@ -6,7 +6,8 @@ import { toast } from 'react-toastify';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { getMessages, getNextId, getUrlId, openDatabase, setMessages } from './db';
 
-import { sessionUid, generateUID } from '~/lib/stores/session';
+// import { sessionUid, generateUID } from '~/lib/stores/session';
+import { sessionUid} from '~/lib/stores/session';
 
 export const projectId = atom<number | undefined>(undefined);
 
@@ -139,7 +140,7 @@ export function useChatHistory() {
         });
 
         //project recorded - retire this uid
-        sessionUid.set(generateUID());
+        // sessionUid.set(generateUID());
 
         if (response_rp.ok) {
           const result_rp = await response_rp.json();
