@@ -253,7 +253,7 @@ async def record_project(
         result = await prompt_collection.update_one(
             filter_criteria,
             {
-                "$set": project_record,
+                "$set": project_record_for_set,
                 "$setOnInsert": {"created_at": datetime.utcnow()}
             },
             upsert=True
