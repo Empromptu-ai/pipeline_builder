@@ -245,6 +245,10 @@ async def record_project(
         print(f"🔍 Filter criteria for upsert: {filter_criteria}")
         print(f"🚀 Performing upsert operation...")
         
+        # Remove created_at from the project_record before upsert
+        project_record_for_set = project_record.copy()
+        project_record_for_set.pop("created_at", None)  # Remove created_at if it exists
+        
         # Perform upsert operation
         result = await prompt_collection.update_one(
             filter_criteria,
