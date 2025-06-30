@@ -1357,7 +1357,8 @@ async def apply_prompt(
     try:
         print(f"[DEBUG] Entering try block")
         
-        # First, look for a record with same project_id, session_uid, and prompt_string
+        # First, look for a record with same session_uid and prompt_string. If we find this, it should be
+        # the exact App and task we want.
         print(f"[DEBUG] Looking for exact match in prompt_collection")
         print(f"[DEBUG] Search criteria: session_uid={session_uid}, prompt_string={request.prompt_string}")
         
@@ -1595,9 +1596,12 @@ async def generate_task_for_prompt(request: ApplyPromptRequest, project_record: 
                 )
             
             # Step 2: Add prompt to task
+            # HACK - Note that we're doubling curly braces to turn our "builder-style" included variable names 
+            # (like {data_element}) into our Optimizer's jinja format (like {{data_element}}).  Solution 
+            # should be to ensure they're both jinja.
             prompt_payload = {
                 "taskId": task_id,
-                "promptText": request.prompt_string,
+                "promptText": request.prompt_string.replace('{','{{').replace('}','}}'),,
                 "modelName": "gpt-4.1-mini",
                 "temperature": 0.2,
                 "userId": user_id
