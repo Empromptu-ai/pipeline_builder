@@ -81,6 +81,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   console.log('userId:', user.id);
+  //session uid:
+  const session_uid = Math.random().toString(36).substring(2) + Date.now().toString(36);
   // 4 . Build one session that contains both WorkOS and analytics info
   return createUserSession(
     {
@@ -93,6 +95,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       analyticsUid:   uid,
       analyticsApiKey: apiKey,
       analyticsUsername: username,
+      sessionUid: session_uid,
     },
     '/',   // redirect home
   );
