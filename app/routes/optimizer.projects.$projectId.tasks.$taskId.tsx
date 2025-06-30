@@ -1,16 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from '@remix-run/react';
+import { useParams, useNavigate, Link } from '@remix-run/react';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 
-import { ArrowLeft, Settings, Play, BarChart3, SquarePen } from 'lucide-react';
+import {
+  ArrowLeft,
+  Settings,
+  Play,
+  SquarePen,
+  Bot,
+  LineChart,
+  PanelLeftOpen,
+  Boxes,
+  BadgeAlert,
+  Code,
+  Copy,
+  Check,
+} from 'lucide-react';
 import { Progress } from '~/components/ui/progress';
-import { getProject, getTask } from '~/lib/services/optimizer';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '~/components/ui/Dialog';
+import { getProject, getTask, deleteTask, getTaskCodeSnippet } from '~/lib/services/optimizer';
 import { useUser } from '~/hooks/useUser';
 import { useOverallStats } from '~/hooks/useOptimizer';
 import { optimizerContextStore } from '~/lib/stores/appView';
 import type { Project, Task } from '~/lib/services/optimizer';
+import { toast } from 'react-toastify';
 
 interface TaskWithAccuracy extends Task {
   initialAccuracy?: number | null;
@@ -29,28 +51,32 @@ export default function TaskDetails() {
   const [isEditing, setIsEditing] = useState(false);
   const [taskName, setTaskName] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [codeSnippet, setCodeSnippet] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [codeCollapsed, setCodeCollapsed] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!projectId || !taskId || !userId) return;
-      
+      if (!projectId || !taskId || !userId) {
+        return;
+      }
+
       try {
         setLoading(true);
-        const [projectData, taskData] = await Promise.all([
-          getProject(userId, projectId),
-          getTask(userId, taskId)
-        ]);
-        
+
+        const [projectData, taskData] = await Promise.all([getProject(userId, projectId), getTask(userId, taskId)]);
+
         if (projectData && taskData) {
           setProject(projectData);
-          
+
           // Update optimizer context store with project and task info
           optimizerContextStore.set({
-            projectId: projectId,
+            projectId,
             projectName: projectData.name,
-            taskId: taskId,
+            taskId,
           });
-          
+
           // Merge task with analytics data
           const taskAnalytics = analytics?.task_scores.find((t) => t.task_id === taskId);
           const taskWithAccuracy: TaskWithAccuracy = {
@@ -59,7 +85,7 @@ export default function TaskDetails() {
             currentAccuracy: taskAnalytics?.current_accuracy || null,
             projectName: projectData.name,
           };
-          
+
           setTask(taskWithAccuracy);
           setTaskName(taskData.name);
           setTaskDescription(taskData.description || '');
@@ -78,6 +104,66 @@ export default function TaskDetails() {
     // TODO: Implement task update functionality
     setIsEditing(false);
   };
+
+  const handleDelete = async () => {
+    try {
+      if (!taskId || !userId) {
+        return;
+      }
+
+      await deleteTask(userId, taskId);
+      setShowDeleteConfirm(false);
+
+      setTimeout(() => {
+        navigate(`/optimizer/projects/${projectId}`);
+      }, 300);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  };
+
+  const copyCodeSnippet = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    navigator.clipboard.writeText(codeSnippet);
+    setCopied(true);
+    toast.success('Code copied to clipboard', {
+      position: 'bottom-right',
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  useEffect(() => {
+    const fetchCodeSnippet = async () => {
+      if (!userId || !taskId) {
+        return;
+      }
+
+      try {
+        // TODO: to do replace with real api key for prod
+        const mockApiKey = 'your-api-key';
+        const result = await getTaskCodeSnippet(userId, taskId, mockApiKey);
+
+        if (result?.text) {
+          setCodeSnippet(result.text);
+        } else {
+          setCodeSnippet('// No code snippet available');
+        }
+      } catch (error) {
+        console.error('Failed to load code snippet:', error);
+        setCodeSnippet('// Error loading code snippet');
+      }
+    };
+
+    fetchCodeSnippet();
+  }, [userId, taskId]);
 
   if (loading) {
     return (
@@ -104,8 +190,6 @@ export default function TaskDetails() {
     );
   }
 
-
-
   return (
     <div className="min-h-full p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -116,14 +200,14 @@ export default function TaskDetails() {
           </Button>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
+          {/* <Button variant="outline" size="sm">
             <Settings className="h-4 w-4 mr-2" />
             Configure
           </Button>
           <Button size="sm">
             <Play className="h-4 w-4 mr-2" />
             Run Optimization
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -169,11 +253,7 @@ export default function TaskDetails() {
                   <div>
                     <CardTitle className="text-2xl flex items-center gap-2">
                       {task.name}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setIsEditing(true)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
                         <SquarePen className="h-4 w-4" />
                       </Button>
                     </CardTitle>
@@ -181,9 +261,7 @@ export default function TaskDetails() {
                   </div>
                 )}
               </div>
-              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                Active
-              </span>
+              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Active</span>
             </div>
           </CardHeader>
           <CardContent>
@@ -219,75 +297,74 @@ export default function TaskDetails() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Inputs</CardTitle>
-                <BarChart3 className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold">-</div>
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  pending
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Prompts</CardTitle>
-                <BarChart3 className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold">-</div>
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  pending
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Evaluations</CardTitle>
-                <BarChart3 className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold">-</div>
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  pending
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Edge Cases</CardTitle>
-                <BarChart3 className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold">-</div>
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                  pending
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              <Button
+                variant="outline"
+                className="h-auto flex flex-col items-center py-3 px-3 hover:bg-purple-50 hover:border-purple-300 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+                asChild
+              >
+                <Link to={`/optimizer/prompts/${projectId}/${taskId}`}>
+                  <Bot className="h-6 w-6 mb-2" />
+                  <span className="text-xs whitespace-normal text-center">Prompt Optimization</span>
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto flex flex-col items-center py-3 px-3 hover:bg-purple-50 hover:border-purple-300 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+                asChild
+              >
+                <Link to={`/optimizer/projects/${projectId}/tasks/${taskId}/inputs`}>
+                  <PanelLeftOpen className="h-6 w-6 mb-2" />
+                  <span className="text-xs whitespace-normal text-center">Input Optimization</span>
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto flex flex-col items-center py-3 px-3 hover:bg-purple-50 hover:border-purple-300 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+                asChild
+              >
+                <Link to={`/optimizer/projects/${projectId}/tasks/${taskId}/models`}>
+                  <Boxes className="h-6 w-6 mb-2" />
+                  <span className="text-xs whitespace-normal text-center">Model Optimization</span>
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto flex flex-col items-center py-3 px-3 hover:bg-purple-50 hover:border-purple-300 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+                asChild
+              >
+                <Link to={`/optimizer/projects/${projectId}/tasks/${taskId}/edge-cases`}>
+                  <BadgeAlert className="h-6 w-6 mb-2" />
+                  <span className="text-xs whitespace-normal text-center">Edge Case Detection</span>
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto flex flex-col items-center py-3 px-3 hover:bg-purple-50 hover:border-purple-300 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+                asChild
+              >
+                <Link to={`/optimizer/projects/${projectId}/tasks/${taskId}/evaluations`}>
+                  <LineChart className="h-6 w-6 mb-2" />
+                  <span className="text-xs whitespace-normal text-center">Evaluations</span>
+                </Link>
+              </Button>
+            </div>
+            <div className="pt-4 flex justify-center">
+              <Button
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700 text-white px-8 py-2"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                Delete Task
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
@@ -312,7 +389,57 @@ export default function TaskDetails() {
             </div>
           </CardContent>
         </Card>
+
+        <div className="mt-6 pt-4">
+          <Card className="w-full">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div
+                  className="flex items-center gap-2 cursor-pointer"
+                  onClick={() => setCodeCollapsed(!codeCollapsed)}
+                >
+                  <Code className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Integration Code</span>
+                </div>
+                <Button variant="ghost" size="icon" onClick={copyCodeSnippet} className="h-8 w-8">
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <div
+                className={`transition-all duration-700 ease-in-out overflow-hidden ${!codeCollapsed ? 'max-h-[2000px]' : 'max-h-0'}`}
+              >
+                <div className="bg-muted p-3 rounded-md text-xs font-mono overflow-x-auto">
+                  <pre>{codeSnippet}</pre>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Add this code to your application to connect with Empromptu
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      {showDeleteConfirm && (
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Are you sure?</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. This will permanently delete the task and all associated data.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete}>
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

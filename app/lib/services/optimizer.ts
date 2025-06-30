@@ -152,6 +152,15 @@ export type Model = {
   available_for_evals: boolean;
 };
 
+export type PromptRegistryItem = {
+  id: number;
+  status: 'draft' | 'live' | 'archived';
+  name: string;
+  description: string | null;
+  currentAccuracy: number | null;
+  lastUsed?: string;
+};
+
 export async function getProjectDetails(userId: string): Promise<ProjectDetail[] | null> {
   try {
     const secureFetch = createSecureFetch(userId);
@@ -647,5 +656,189 @@ export async function deleteInput(userId: string, taskId: string, inputId: strin
   } catch (error) {
     console.error('Error deleting input', error);
     return false;
+  }
+}
+
+export async function getTaskCodeSnippet(
+  userId: string,
+  taskId: string,
+  userApiKey: string,
+): Promise<{ text: string } | null> {
+  try {
+    const secureFetch = createSecureFetch(userId);
+    const response = await secureFetch('POST', `/api/tasks/${taskId}/codesample/`, {
+      userApiKey,
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = (await response.json()) as { text: string };
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching code snippet', error);
+    return null;
+  }
+}
+
+export async function promoteExperiment(
+  userId: string,
+  userApiKey: string,
+  taskId: string,
+  runIds: string[],
+  promptIds: string[],
+  evalIds: string[],
+): Promise<{ status: 'success' } | null> {
+  try {
+    const secureFetch = createSecureFetch(userId);
+    const response = await secureFetch('POST', `/api/tasks/${taskId}/runs/promote/`, {
+      userApiKey,
+      runIds,
+      promptIds,
+      evalIds,
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = (await response.json()) as { status: 'success' };
+
+    return result;
+  } catch (error) {
+    console.error('Error promoting experiment', error);
+    return null;
+  }
+}
+
+export async function promoteEdgeCase(
+  userId: string,
+  userApiKey: string,
+  taskId: string,
+  runId: string,
+  promptId: string,
+): Promise<{ status: 'success' } | null> {
+  try {
+    const secureFetch = createSecureFetch(userId);
+    const response = await secureFetch('POST', `/api/tasks/${taskId}/runs/promote/`, {
+      userApiKey,
+      runIds: [runId],
+      promptIds: [promptId],
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = (await response.json()) as { status: 'success' };
+
+    return result;
+  } catch (error) {
+    console.error('Error promoting edge case', error);
+    return null;
+  }
+}
+
+export async function getPromptRegistry(userId: string, taskId: string): Promise<PromptRegistryItem[] | null> {
+  try {
+    const secureFetch = createSecureFetch(userId);
+    const response = await secureFetch('PUT', '/api/tasks/' + taskId + '/prompt_registry/');
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = (await response.json()) as { promptRegistry: PromptRegistryItem[] };
+
+    return result.promptRegistry;
+  } catch (error) {
+    console.error('Error fetching Prompt Registry', error);
+    return null;
+  }
+}
+
+export async function getRecentEventsForTask(
+  userId: string,
+  taskId: string,
+  count: number = 10,
+): Promise<any[] | null> {
+  try {
+    const secureFetch = createSecureFetch(userId);
+    const response = await secureFetch('POST', `/api/tasks/${taskId}/events/recent/`, {
+      count,
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = (await response.json()) as { events: any[] };
+
+    return result.events;
+  } catch (error) {
+    console.error('Error fetching recent events', error);
+    return null;
+  }
+}
+
+export async function getEdgeCaseScatterPlotData(
+  userId: string,
+  taskId: string,
+  count: number = 100,
+): Promise<any[] | null> {
+  try {
+    const secureFetch = createSecureFetch(userId);
+    const response = await secureFetch('POST', `/api/tasks/${taskId}/events/scatter_plot/`, {
+      count,
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = (await response.json()) as { events: any[] };
+
+    return result.events;
+  } catch (error) {
+    console.error('Error fetching edge case scatter plot data', error);
+    return null;
+  }
+}
+
+export async function getTaskAnalytics(userId: string, taskId: string): Promise<any | null> {
+  try {
+    const secureFetch = createSecureFetch(userId);
+    const response = await secureFetch('GET', `/api/tasks/${taskId}/events/analytics/`);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = await response.json();
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching task analytics', error);
+    return null;
+  }
+}
+
+export async function getTaskScoredist(userId: string, taskId: string): Promise<any | null> {
+  try {
+    const secureFetch = createSecureFetch(userId);
+    const response = await secureFetch('GET', `/api/tasks/${taskId}/events/scoredist/`);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const result = await response.json();
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching task score distribution', error);
+    return null;
   }
 }

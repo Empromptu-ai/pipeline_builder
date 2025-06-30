@@ -7,6 +7,7 @@ import { stripIndents } from './utils/stripIndent';
 import tailwindStyles from './styles/tailwind.css?url';
 import { createHead } from 'remix-island';
 import { useEffect } from 'react';
+import { ToastContainer } from 'react-toastify';
 
 import reactToastifyStyles from 'react-toastify/dist/ReactToastify.css?url';
 import globalStyles from './styles/index.scss?url';
@@ -74,6 +75,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+      <ToastContainer
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={theme === 'dark' ? 'dark' : 'light'}
+      />
       <ScrollRestoration />
       <Scripts />
     </>

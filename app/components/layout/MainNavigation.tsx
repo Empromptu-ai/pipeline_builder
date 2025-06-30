@@ -27,8 +27,8 @@ export function MainNavigation() {
               to={item.href}
               className={({ isActive }) =>
                 cn(
-                  'block px-6 py-2 text-bolt-elements-textSecondary hover:bg-bolt-elements-background-depth-3 hover:text-bolt-elements-textPrimary transition-colors',
-                  isActive && 'bg-bolt-elements-background-depth-3 text-bolt-elements-textPrimary font-medium',
+                  'block px-6 py-2 text-bolt-elements-textSecondary hover:bg-purple-50 hover:text-black-700 transition-colors',
+                  isActive && 'bg-purple-100 text-black-700 font-medium',
                 )
               }
             >
