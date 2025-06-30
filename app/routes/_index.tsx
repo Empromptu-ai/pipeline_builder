@@ -33,7 +33,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   // also add this to the session in case we can't get it any other way
   // userSession.sessionUid = sessionUid
   // use this for setting in other ways
-  sessionUid = userSession.sessionUid
+  const sessionUid = userSession.sessionUid
 
   setSessionUid(sessionUid); // Set it globally (or as globally as a trashfire like remix can manage, this is server-side)
   
