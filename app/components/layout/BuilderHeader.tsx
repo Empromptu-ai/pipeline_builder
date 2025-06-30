@@ -15,7 +15,7 @@ export function BuilderHeader() {
   return (
     <header className="h-16 px-6 flex items-center justify-between bg-bolt-elements-background-depth-1 border-b border-bolt-elements-borderColor">
       {/* Breadcrumb */}
-      <div className="text-sm text-bolt-elements-textSecondary">
+      {/* <div className="text-sm text-bolt-elements-textSecondary">
         {projectId ? (
           <>
             Projects &gt; <span className="font-medium">{projectName}</span> &gt;{' '}
@@ -24,12 +24,11 @@ export function BuilderHeader() {
         ) : (
           'Projects'
         )}
-      </div>
+      </div> */}
 
       {/* Action Buttons */}
       <div className="flex items-center space-x-4">
-        <ThemeSwitch />
-        {projectId && (
+        {/* {projectId && (
           <div className="flex items-center space-x-2">
             <Button
               onClick={handleOptimizeClick}
@@ -42,8 +41,11 @@ export function BuilderHeader() {
             </Button>
             <DeployButtons />
           </div>
-        )}
+        )} */}
       </div>
+
+      {/* Theme Switch - Far Right */}
+      <ThemeSwitch />
     </header>
   );
 }

@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardView from '~/components/optimizer/DashboardView';
-import DashboardProjectsTasksList from '~/components/optimizer/DashboardProjectsTasksList';
+import { DashboardProjectsTasksList } from '~/components/optimizer/DashboardProjectsTasksList';
 import { useNavigate } from '@remix-run/react';
 import { useOverallStats } from '~/hooks/useOptimizer';
+import { optimizerContextStore } from '~/lib/stores/appView';
 
 export default function OptimizerDashboard() {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const navigate = useNavigate();
   const { data: analytics, isLoading, error } = useOverallStats();
+
+  useEffect(() => {
+    optimizerContextStore.set({});
+  }, []);
 
   const handleNavigateToProject = (projectId: string) => {
     navigate(`/optimizer/projects/${projectId}`);

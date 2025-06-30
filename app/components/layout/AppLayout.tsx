@@ -15,7 +15,7 @@ export function AppLayout({ children, mode }: AppLayoutProps) {
   const activeMode = mode || currentMode;
 
   return (
-    <div className="h-screen flex bg-bolt-elements-background-depth-2 overflow-hidden">
+    <div className="min-h-screen flex bg-bolt-elements-background-depth-2">
       {/* Left Navigation - Always Visible */}
       <MainNavigation />
 
@@ -25,7 +25,7 @@ export function AppLayout({ children, mode }: AppLayoutProps) {
         {activeMode === 'builder' ? <BuilderHeader /> : <OptimizerHeader />}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-hidden">{children}</main>
+        <main className="flex-1">{children}</main>
       </div>
     </div>
   );

@@ -7,10 +7,12 @@ interface OptimizerLayoutProps {
 
 export function OptimizerLayout({ children }: OptimizerLayoutProps) {
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex flex-1 overflow-hidden">
-        <OptimizerTabs />
-        <div className="flex-1 p-6 overflow-auto transition-colors bg-bolt-elements-background-depth-2">{children}</div>
+    <div className="flex flex-1 flex-col">
+      <div className="flex flex-1">
+        {/* <OptimizerTabs /> */}
+        <div className="flex-1 overflow-auto transition-colors bg-bolt-elements-background-depth-2">
+          <div className="p-6">{children}</div>
+        </div>
       </div>
     </div>
   );

@@ -19,13 +19,6 @@ interface OverviewAnalytics {
   }>;
 }
 
-interface Task {
-  id: string;
-  name: string;
-  initialAccuracy?: number | null;
-  currentAccuracy?: number | null;
-}
-
 interface DashboardProjectsTasksListProps {
   analytics: OverviewAnalytics;
   handleNavigateToProject: (projectId: string) => void;
@@ -34,7 +27,7 @@ interface DashboardProjectsTasksListProps {
 
 import { useProjectList } from '~/hooks/useOptimizer';
 
-const DashboardProjectsTasksList = ({
+export const DashboardProjectsTasksList = ({
   analytics,
   handleNavigateToProject,
   handleNavigateToTask,
@@ -177,5 +170,3 @@ const DashboardProjectsTasksList = ({
     </div>
   );
 };
-
-export default DashboardProjectsTasksList;
