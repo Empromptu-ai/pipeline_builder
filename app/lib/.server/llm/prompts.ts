@@ -908,88 +908,87 @@ export function getInjectedPrompt1() {
   // `;
 
 
-export const INJECTED_PROMPT_1 = stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:
+// export const INJECTED_PROMPT_1 = stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:
 
-(For screens where users upload documents, extract structured data, and view outputs):
-Generate a three-step Upload & Extract flow for seed-to-Series-B small-business brands.
-  • Step 1: File upload card with drag-and-drop and “Choose File” button, branded with some PRIMARY_COLOR of your choice.
-  • Step 2: Extraction progress screen showing a Tailwind-styled spinner, clear status message, and cancel option.
-  • Step 3: Data output table with Bootstrap table classes, sortable columns, and “Download CSV” button.
-  • Step 4: Ensure mobile breakpoints collapse sidebars into accordion panels; implement dark mode variants; include ARIA labels on all interactive elements.”
+// (For screens where users upload documents, extract structured data, and view outputs):
+// Generate a three-step Upload & Extract flow for seed-to-Series-B small-business brands.
+//   • Step 1: File upload card with drag-and-drop and “Choose File” button, branded with some PRIMARY_COLOR of your choice.
+//   • Step 2: Extraction progress screen showing a Tailwind-styled spinner, clear status message, and cancel option.
+//   • Step 3: Data output table with Bootstrap table classes, sortable columns, and “Download CSV” button.
+//   • Step 4: Ensure mobile breakpoints collapse sidebars into accordion panels; implement dark mode variants; include ARIA labels on all interactive elements.”
 
-(For embedding a conversational AI widget into an existing portal):
-Produce a chatbot UI panel that sits at bottom-right:
-  • Step 1:  Minimal header bar with logo icon and “Help” label in some PRIMARY_COLOR of your choice.
-  • Step 2:  Scrollable message window styled with alternating light/dark bubble backgrounds.
-  • Step 3:  Input area with accessible placeholder text 'Ask me anything...', a send icon button, and an optional attachment button.
-  • Step 4:  Ensure focus outlines, keyboard navigation, and proper aria-live regions for new messages.
-  • Step 5:  Include a mobile view where the panel expands full-screen and a dark-mode toggle.”
+// (For embedding a conversational AI widget into an existing portal):
+// Produce a chatbot UI panel that sits at bottom-right:
+//   • Step 1:  Minimal header bar with logo icon and “Help” label in some PRIMARY_COLOR of your choice.
+//   • Step 2:  Scrollable message window styled with alternating light/dark bubble backgrounds.
+//   • Step 3:  Input area with accessible placeholder text 'Ask me anything...', a send icon button, and an optional attachment button.
+//   • Step 4:  Ensure focus outlines, keyboard navigation, and proper aria-live regions for new messages.
+//   • Step 5:  Include a mobile view where the panel expands full-screen and a dark-mode toggle.”
 
-(For workflows where users upload a document, enter a prompt themselves, then see a summary or output):
-Design a three-column layout on desktop, single-column on mobile, for Upload + Prompt + Summary:
-  • Step 1:  Upload Column: Drag-and-drop zone with dashed border and an upload progress bar.
-  • Step 2:  Prompt Column: A text area with placeholder 'Enter instructions...', character count, and 'Run' button in green.
-  • Step 3:  Summary Column: Shows AI-generated summary in a scrollable card with expandable sections.
-  • Step 4:  Follow minimal luxe style: plenty of white space, 2xl rounded corners, soft shadows. Use Tailwind classes for spacing. Include dark-mode card variants. Add aria-describedby on summary sections.”
+// (For workflows where users upload a document, enter a prompt themselves, then see a summary or output):
+// Design a three-column layout on desktop, single-column on mobile, for Upload + Prompt + Summary:
+//   • Step 1:  Upload Column: Drag-and-drop zone with dashed border and an upload progress bar.
+//   • Step 2:  Prompt Column: A text area with placeholder 'Enter instructions...', character count, and 'Run' button in green.
+//   • Step 3:  Summary Column: Shows AI-generated summary in a scrollable card with expandable sections.
+//   • Step 4:  Follow minimal luxe style: plenty of white space, 2xl rounded corners, soft shadows. Use Tailwind classes for spacing. Include dark-mode card variants. Add aria-describedby on summary sections.”
 
-(General - for all workflows)
-Do not use MUI icons, they break in this environment.
-Be sure that user-input windows are declared outside of main event loops to avoid component recreation bugs. 
-Please ensure that all text and windows have good contrast against their background.
+// (General - for all workflows)
+// Do not use MUI icons, they break in this environment.
+// Be sure that user-input windows are declared outside of main event loops to avoid component recreation bugs. 
+// Please ensure that all text and windows have good contrast against their background.
 
-Also please review the API spec and be absolutely sure that you are calling those functions with the appropriate data formats, for example ensuring that you are sending object_name values, encapsulating input correctly in json, and using the exact function endpoints as they were defined.
-As a reminder, all API endpoints are at https://staging.impromptu-labs.com/api_tools , and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}").
+// Also please review the API spec and be absolutely sure that you are calling those functions with the appropriate data formats, for example ensuring that you are sending object_name values, encapsulating input correctly in json, and using the exact function endpoints as they were defined.
+// As a reminder, all API endpoints are at https://staging.impromptu-labs.com/api_tools , and calls must include an HTTP header named Authorization. with the value "Bearer ${description || ''}").
 
-And remember the actual API functions you have access to, and what they expect:
+// And remember the actual API functions you have access to, and what they expect:
 
-### 1. Data Ingestion: '/input_data'
-**Purpose**: Import data from strings, files, or URLs into the system
-**Method**: POST
-**Parameters**:
-- 'created_object_name' (string): Name for the data object to create/append to
-- 'data_type' (string): Either "strings", "files", or "urls"
-- 'input_data' (list): List of strings, file data, or URLs to process
+// ### 1. Data Ingestion: '/input_data'
+// **Purpose**: Import data from strings, files, or URLs into the system
+// **Method**: POST
+// **Parameters**:
+// - 'created_object_name' (string): Name for the data object to create/append to
+// - 'data_type' (string): Either "strings", "files", or "urls"
+// - 'input_data' (list): List of strings, file data, or URLs to process
 
-### 2. Data Processing: '/apply_prompt'
-**Purpose**: Apply AI prompts to data combinations to generate new insights
-**Method**: POST
-**Parameters**:
-- 'created_object_names' (list of strings): Names of new objects to create from results
-- 'prompt_string' (string): Template with placeholders to match with input_object_name values. 
-- 'inputs' (list): Input specifications with object names and processing modes
+// ### 2. Data Processing: '/apply_prompt'
+// **Purpose**: Apply AI prompts to data combinations to generate new insights
+// **Method**: POST
+// **Parameters**:
+// - 'created_object_names' (list of strings): Names of new objects to create from results
+// - 'prompt_string' (string): Template with placeholders to match with input_object_name values. 
+// - 'inputs' (list): Input specifications with object names and processing modes
 
-**Processing Modes**:
-- 'combine_events': Merge all data from an object into one combined text
-- 'use_individually': Process each piece of data separately
-- 'match_keys': Only combine data entries that share common tracking keys
+// **Processing Modes**:
+// - 'combine_events': Merge all data from an object into one combined text
+// - 'use_individually': Process each piece of data separately
+// - 'match_keys': Only combine data entries that share common tracking keys
 
-### 3. Data Management
-- 'GET /return_data/{object_name}': Retrieve a specific data object for display or use. 
-Returns a key called "text_value" that has concatenated values for this object.
+// ### 3. Data Management
+// - 'GET /return_data/{object_name}': Retrieve a specific data object for display or use. 
+// Returns a key called "text_value" that has concatenated values for this object.
 
-- 'DELETE /objects/{object_name}': Delete a data object by name
-
-
-### 4. Agent Creation
-
-Make a new agent: POST /create-agent: Create a new chatbot to handle a specific question or problem.
-
-Talk to an existing agent: POST /chat: Continue the conversation with an agent
-
-### 5. Browser Use and Internet Search
-
-Begin Researching a topic: POST /research_topic .  Begin Researching a topic using an online browser to find information through web search.
-
-Check and get research task status:  GET /research_status/{task_id} .  Check this every 15 or 30 seconds until the result is ready. When status is "completed", the output_data field will contain your research results. Expect to wait a while for these results.
+// - 'DELETE /objects/{object_name}': Delete a data object by name
 
 
-Ensure that the necessary input and output controls are present to allow the user to run this code, sending in what they need to at the time.
+// ### 4. Agent Creation
 
-Also, please add a green button to show the raw API input/output results, and a red button that will delete the objects produced by the code.
+// Make a new agent: POST /create-agent: Create a new chatbot to handle a specific question or problem.
 
-Please also echo the exact API calls to the screen for debugging as they happen.
-`;
-// }
+// Talk to an existing agent: POST /chat: Continue the conversation with an agent
+
+// ### 5. Browser Use and Internet Search
+
+// Begin Researching a topic: POST /research_topic .  Begin Researching a topic using an online browser to find information through web search.
+
+// Check and get research task status:  GET /research_status/{task_id} .  Check this every 15 or 30 seconds until the result is ready. When status is "completed", the output_data field will contain your research results. Expect to wait a while for these results.
+
+
+// Ensure that the necessary input and output controls are present to allow the user to run this code, sending in what they need to at the time.
+
+// Also, please add a green button to show the raw API input/output results, and a red button that will delete the objects produced by the code.
+
+// Please also echo the exact API calls to the screen for debugging as they happen.
+// `;
 
 // Remember to re-install and run npm run dev (using <boltAction type="shell"> ) after any changes.
 // Remember, do not build or run the software yet.
