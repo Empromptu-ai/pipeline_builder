@@ -83,7 +83,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
   const { messages } = await request.json<{ messages: Messages }>();
 
   console.log(`The request Object: ${request}`);
-  console.log(`The request Object JSON: ${request.json()}`);
+  console.log(`The request Object messages: ${messages}`);
 
   // get the user session and pull the session UID out of it.
   const userSession = await getUserSession(request);
