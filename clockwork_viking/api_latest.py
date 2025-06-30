@@ -1658,7 +1658,7 @@ async def apply_existing_prompt(task_id, request: ApplyPromptRequest, prompt_rec
     """
     Apply prompts to data combinations and generate new objects
     """
-    user_token = 'TEMPORARY'
+    user_token = ''
     try:
         print(f"=== Starting apply_existing_prompt function ===")
         print(f"User token: {user_token}")
