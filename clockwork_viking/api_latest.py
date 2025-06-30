@@ -1652,7 +1652,8 @@ async def generate_task_for_prompt(request: ApplyPromptRequest, project_record: 
 
 
 @app.post("/apply_existing_prompt")
-async def apply_existing_prompt(request: ApplyPromptRequest, user_token: str = Depends(get_user_token), prompt_record=None):
+async def apply_existing_prompt(task_id, request: ApplyPromptRequest, prompt_record=None):
+    # async def apply_existing_prompt(request: ApplyPromptRequest, user_token: str = Depends(get_user_token), prompt_record=None):
     """
     Apply prompts to data combinations and generate new objects
     """
