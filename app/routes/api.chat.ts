@@ -86,6 +86,8 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
   const userSession = await getUserSession(request);
   const description = userSession.sessionUid;
 
+  console.log('Got description in api.chat.ts', description);
+
   // Generate a unique session ID for this conversation
   // const sessionId = generateSessionId();
   // console.log(`Generated session ID: ${sessionId}`);
@@ -180,11 +182,13 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           console.log(`Reached max token limit (${MAX_TOKENS}): Continuing message (${switchesLeft} switches left)`);
           managedMessages.push({ role: 'assistant' as const, content });
           managedMessages.push({ role: 'user' as const, content: CONTINUE_PROMPT });
+          console.log('About to Steam text with description:', description);
           const result = await streamTextWithYourAgent(managedMessages, context.cloudflare.env, yourAgentOptions, description);
           return stream.switchSource(result.toAIStream());
         },
       };
-      
+
+      console.log('About to Steam text with description:', description);
       const result = await streamTextWithYourAgent(managedMessages, context.cloudflare.env, yourAgentOptions, description);
       stream.switchSource(result.toAIStream());
       
@@ -245,6 +249,7 @@ function streamTextWithYourAgent(messages: Messages, env: Env, options?: Streami
 
 function getYourAgentSystemPrompt(description: string): string {
   //return API_CHATBOT_PROMPT; //(sessionId);
+  console.log('getYourAgentSystemPrompt with description:', description);
   return getApiChatbotPrompt(description); // should include current sessionId
 }
 

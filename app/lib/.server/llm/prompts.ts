@@ -12,7 +12,7 @@ import { stripIndents } from '~/utils/stripIndent';
 // console.log('got sessionId at the top of prompts declaration file:', description);
 
 
-import { getSessionUid } from '~/utils/session-store';
+// import { getSessionUid } from '~/utils/session-store';
 
 //export function someOtherFunction() {
 //  const sessionUid = getSessionUid();
