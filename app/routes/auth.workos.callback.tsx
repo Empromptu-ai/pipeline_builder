@@ -12,8 +12,6 @@ const clientId = process.env.WORKOS_CLIENT_ID!;
 const redirectUri = `${process.env.APP_ORIGIN}/auth/workos/callback`;
 
 
-
-
 import { json, redirect, type LoaderFunctionArgs } from '@remix-run/node';
 import { WorkOS } from '@workos-inc/node';
 import { createUserSession } from '~/utils/session.server';
