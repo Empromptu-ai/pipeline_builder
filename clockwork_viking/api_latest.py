@@ -1601,7 +1601,7 @@ async def generate_task_for_prompt(request: ApplyPromptRequest, project_record: 
             # should be to ensure they're both jinja.
             prompt_payload = {
                 "taskId": task_id,
-                "promptText": request.prompt_string.replace('{','{{').replace('}','}}'),
+                "promptText": request.prompt_string.replace('{','{{').replace('}','}}'), 
                 "modelName": "gpt-4.1-mini",
                 "temperature": 0.2,
                 "userId": user_id
