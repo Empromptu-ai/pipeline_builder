@@ -29,6 +29,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
   // Generate the session UID here (for app disambiguation)
   const sessionUid = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
+  // also add this to the session in case we can't get it any other way
+  userSession.sessionUid = sessionUid
+
   setSessionUid(sessionUid); // Set it globally (or as globally as a trashfire like remix can manage, this is server-side)
   
   //better send it in a cookie too because apparently remix declared multiple server environments that also can't communicate
@@ -42,7 +45,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     //  apiKey,
     //  customSetting,
     //}
-  }
+  },
   //and here's the cookie too, because remix can't comminicate betweeen any of its dozen-odd layers, or with 
   // any of its many dozens of libraries.
   {
