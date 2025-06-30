@@ -1385,7 +1385,8 @@ async def apply_prompt(
             result = await apply_existing_prompt(
                 task_id=exact_match["task_id"],
                 request=request,
-                prompt_record=exact_match
+                prompt_record=exact_match,
+                session_uid = session_uid
             )
             
             print(f"[DEBUG] apply_existing_prompt returned: {result}")
@@ -1652,13 +1653,12 @@ async def generate_task_for_prompt(request: ApplyPromptRequest, project_record: 
 
 
 @app.post("/apply_existing_prompt")
-async def apply_existing_prompt(task_id, request: ApplyPromptRequest, prompt_record=None):
+async def apply_existing_prompt(task_id, request: ApplyPromptRequest, prompt_record=None, session_uid):
     # async def apply_existing_prompt(request: ApplyPromptRequest, user_token: str = Depends(get_user_token), prompt_record=None):
-    
     """
     Apply prompts to data combinations and generate new objects
     """
-    user_token = ''
+    user_token = session_uid
     try:
         print(f"=== Starting apply_existing_prompt function ===")
         print(f"User token: {user_token}")
