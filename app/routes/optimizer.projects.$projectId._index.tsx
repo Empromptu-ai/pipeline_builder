@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from '@remix-run/react';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
+import { Progress } from '~/components/ui/progress';
 import { ArrowLeft, ExternalLink, Plus } from 'lucide-react';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '~/components/ui/table';
 import {
@@ -174,32 +175,38 @@ export default function ProjectDetails() {
             <p className="text-muted-foreground">{project.description}</p>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {tasksWithAccuracy.length > 0
-                    ? (
-                        tasksWithAccuracy
-                          .filter((task) => task.initialAccuracy != null)
-                          .reduce((acc, task) => acc + (task.initialAccuracy || 0), 0) /
-                        tasksWithAccuracy.filter((task) => task.initialAccuracy != null).length
-                      ).toFixed(2)
-                    : 'N/A'}
-                  %
+                  {(() => {
+                    const validTasks = tasksWithAccuracy.filter((task) => task.initialAccuracy != null);
+
+                    if (validTasks.length === 0) {
+                      return '0.00%';
+                    }
+
+                    const average =
+                      validTasks.reduce((acc, task) => acc + (task.initialAccuracy || 0), 0) / validTasks.length;
+
+                    return isNaN(average) ? '0.00%' : `${average.toFixed(2)}%`;
+                  })()}
                 </div>
                 <div className="text-sm text-muted-foreground">Average Initial Accuracy</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {tasksWithAccuracy.length > 0
-                    ? (
-                        tasksWithAccuracy
-                          .filter((task) => task.currentAccuracy != null)
-                          .reduce((acc, task) => acc + (task.currentAccuracy || 0), 0) /
-                        tasksWithAccuracy.filter((task) => task.currentAccuracy != null).length
-                      ).toFixed(2)
-                    : 'N/A'}
-                  %
+                  {(() => {
+                    const validTasks = tasksWithAccuracy.filter((task) => task.currentAccuracy != null);
+
+                    if (validTasks.length === 0) {
+                      return '0.00%';
+                    }
+
+                    const average =
+                      validTasks.reduce((acc, task) => acc + (task.currentAccuracy || 0), 0) / validTasks.length;
+
+                    return isNaN(average) ? '0.00%' : `${average.toFixed(2)}%`;
+                  })()}
                 </div>
                 <div className="text-sm text-muted-foreground">Average Current Accuracy</div>
               </div>
@@ -207,6 +214,42 @@ export default function ProjectDetails() {
                 <div className="text-2xl font-bold text-purple-600">{tasksWithAccuracy.length}</div>
                 <div className="text-sm text-muted-foreground">Total Tasks</div>
               </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-muted-foreground">Progress</span>
+                <span className="text-sm font-medium">
+                  {(() => {
+                    const validTasks = tasksWithAccuracy.filter((task) => task.currentAccuracy != null);
+
+                    if (validTasks.length === 0) {
+                      return '0.00%';
+                    }
+
+                    const average =
+                      validTasks.reduce((acc, task) => acc + (task.currentAccuracy || 0), 0) / validTasks.length;
+
+                    return isNaN(average) ? '0.00%' : `${average.toFixed(2)}%`;
+                  })()}
+                </span>
+              </div>
+              <Progress
+                value={(() => {
+                  const validTasks = tasksWithAccuracy.filter((task) => task.currentAccuracy != null);
+
+                  if (validTasks.length === 0) {
+                    return 0;
+                  }
+
+                  const average =
+                    validTasks.reduce((acc, task) => acc + (task.currentAccuracy || 0), 0) / validTasks.length;
+
+                  return isNaN(average) ? 0 : average;
+                })()}
+                className="h-2"
+              />
             </div>
           </CardContent>
         </Card>

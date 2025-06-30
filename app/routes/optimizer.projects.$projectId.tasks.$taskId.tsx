@@ -6,8 +6,6 @@ import { Input } from '~/components/ui/input';
 
 import {
   ArrowLeft,
-  Settings,
-  Play,
   SquarePen,
   Bot,
   LineChart,
@@ -31,7 +29,7 @@ import { getProject, getTask, deleteTask, getTaskCodeSnippet } from '~/lib/servi
 import { useUser } from '~/hooks/useUser';
 import { useOverallStats } from '~/hooks/useOptimizer';
 import { optimizerContextStore } from '~/lib/stores/appView';
-import type { Project, Task } from '~/lib/services/optimizer';
+import type { Task } from '~/lib/services/optimizer';
 import { toast } from 'react-toastify';
 
 interface TaskWithAccuracy extends Task {
@@ -46,7 +44,6 @@ export default function TaskDetails() {
   const { uid: userId } = useUser();
   const { data: analytics } = useOverallStats();
   const [task, setTask] = useState<TaskWithAccuracy | null>(null);
-  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [taskName, setTaskName] = useState('');
@@ -68,8 +65,6 @@ export default function TaskDetails() {
         const [projectData, taskData] = await Promise.all([getProject(userId, projectId), getTask(userId, taskId)]);
 
         if (projectData && taskData) {
-          setProject(projectData);
-
           // Update optimizer context store with project and task info
           optimizerContextStore.set({
             projectId,
@@ -268,21 +263,50 @@ export default function TaskDetails() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-blue-600">
-                  {task.initialAccuracy != null ? `${task.initialAccuracy.toFixed(2)}%` : 'N/A'}
+                  {(() => {
+                    if (task.initialAccuracy == null) {
+                      return '0.00%';
+                    }
+
+                    const value = Number(task.initialAccuracy);
+
+                    return isNaN(value) ? '0.00%' : `${value.toFixed(2)}%`;
+                  })()}
                 </div>
                 <div className="text-sm text-muted-foreground">Initial Accuracy</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-green-600">
-                  {task.currentAccuracy != null ? `${task.currentAccuracy.toFixed(2)}%` : 'N/A'}
+                  {(() => {
+                    if (task.currentAccuracy == null) {
+                      return '0.00%';
+                    }
+
+                    const value = Number(task.currentAccuracy);
+
+                    return isNaN(value) ? '0.00%' : `${value.toFixed(2)}%`;
+                  })()}
                 </div>
                 <div className="text-sm text-muted-foreground">Current Accuracy</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-purple-600">
-                  {task.initialAccuracy != null && task.currentAccuracy != null
-                    ? `+${(task.currentAccuracy - task.initialAccuracy).toFixed(2)}%`
-                    : 'N/A'}
+                  {(() => {
+                    if (task.initialAccuracy == null || task.currentAccuracy == null) {
+                      return '0.00%';
+                    }
+
+                    const initial = Number(task.initialAccuracy);
+                    const current = Number(task.currentAccuracy);
+
+                    if (isNaN(initial) || isNaN(current)) {
+                      return '0.00%';
+                    }
+
+                    const improvement = current - initial;
+
+                    return `${improvement >= 0 ? '+' : ''}${improvement.toFixed(2)}%`;
+                  })()}
                 </div>
                 <div className="text-sm text-muted-foreground">Improvement</div>
               </div>
@@ -290,9 +314,30 @@ export default function TaskDetails() {
             <div className="mt-6">
               <div className="flex justify-between text-sm mb-2">
                 <span>Progress</span>
-                <span>{task.currentAccuracy != null ? `${task.currentAccuracy.toFixed(2)}%` : 'N/A'}</span>
+                <span>
+                  {(() => {
+                    if (task.currentAccuracy == null) {
+                      return '0.00%';
+                    }
+
+                    const value = Number(task.currentAccuracy);
+
+                    return isNaN(value) ? '0.00%' : `${value.toFixed(2)}%`;
+                  })()}
+                </span>
               </div>
-              <Progress value={task.currentAccuracy || 0} className="h-3" />
+              <Progress
+                value={(() => {
+                  if (task.currentAccuracy == null) {
+                    return 0;
+                  }
+
+                  const value = Number(task.currentAccuracy);
+
+                  return isNaN(value) ? 0 : value;
+                })()}
+                className="h-3"
+              />
             </div>
           </CardContent>
         </Card>
@@ -318,7 +363,7 @@ export default function TaskDetails() {
                 className="h-auto flex flex-col items-center py-3 px-3 hover:bg-purple-50 hover:border-purple-300 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
                 asChild
               >
-                <Link to={`/optimizer/projects/${projectId}/tasks/${taskId}/inputs`}>
+                <Link to={`/optimizer/inputs/${projectId}/tasks/${taskId}`}>
                   <PanelLeftOpen className="h-6 w-6 mb-2" />
                   <span className="text-xs whitespace-normal text-center">Input Optimization</span>
                 </Link>
@@ -328,7 +373,7 @@ export default function TaskDetails() {
                 className="h-auto flex flex-col items-center py-3 px-3 hover:bg-purple-50 hover:border-purple-300 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
                 asChild
               >
-                <Link to={`/optimizer/projects/${projectId}/tasks/${taskId}/models`}>
+                <Link to={`/optimizer/models/${projectId}/tasks/${taskId}`}>
                   <Boxes className="h-6 w-6 mb-2" />
                   <span className="text-xs whitespace-normal text-center">Model Optimization</span>
                 </Link>

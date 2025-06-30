@@ -354,7 +354,7 @@ export function useManualInputs(taskId: string | undefined) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchInputs = async () => {
     if (!taskId) {
       setData(null);
       setIsLoading(false);
@@ -362,21 +362,21 @@ export function useManualInputs(taskId: string | undefined) {
       return;
     }
 
-    const fetchInputs = async () => {
-      try {
-        setIsLoading(true);
+    try {
+      setIsLoading(true);
 
-        const inputs = await optimizerService.getManualInputsForTask(user.uid, taskId);
-        setData(inputs);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch inputs');
-        setData(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      const inputs = await optimizerService.getManualInputsForTask(user.uid, taskId);
+      setData(inputs);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch inputs');
+      setData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchInputs();
   }, [user.uid, taskId]);
 
@@ -384,6 +384,7 @@ export function useManualInputs(taskId: string | undefined) {
     data,
     isLoading,
     error,
+    refetch: fetchInputs,
   };
 }
 
@@ -440,6 +441,45 @@ export function useCreateTask() {
 
   return {
     createTask,
+    isLoading,
+    error,
+  };
+}
+
+export function useRecentEvents(taskId: string | undefined) {
+  const user = useUser();
+  const [data, setData] = useState<any[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!taskId) {
+      setData(null);
+      setIsLoading(false);
+
+      return;
+    }
+
+    const fetchRecentEvents = async () => {
+      try {
+        setIsLoading(true);
+
+        const events = await optimizerService.getRecentEventsForTask(user.uid, taskId);
+        setData(events);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch recent events');
+        setData(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRecentEvents();
+  }, [user.uid, taskId]);
+
+  return {
+    data,
     isLoading,
     error,
   };
