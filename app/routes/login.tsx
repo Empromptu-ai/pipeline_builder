@@ -99,6 +99,8 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   try {
+    //session uid:
+    const session_uid = Math.random().toString(36).substring(2) + Date.now().toString(36);
     if (action === 'register') {
       if (!email) {
         return json({ error: 'Email is required for registration' }, { status: 400 });
@@ -122,6 +124,7 @@ export async function action({ request }: ActionFunctionArgs) {
         analyticsUid: uid,
         analyticsApiKey: apiKey,
         analyticsUsername: username,
+        sessionUid: session_uid,
       };
 
       return createUserSession(userSession);
@@ -141,6 +144,7 @@ export async function action({ request }: ActionFunctionArgs) {
         analyticsUid: uid,
         analyticsApiKey: apiKey,
         analyticsUsername: username,
+        sessionUid: session_uid,
       };
 
       return createUserSession(userSession);

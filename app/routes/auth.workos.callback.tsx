@@ -12,8 +12,6 @@ const clientId = process.env.WORKOS_CLIENT_ID!;
 const redirectUri = `${process.env.APP_ORIGIN}/auth/workos/callback`;
 
 
-
-
 import { json, redirect, type LoaderFunctionArgs } from '@remix-run/node';
 import { WorkOS } from '@workos-inc/node';
 import { createUserSession } from '~/utils/session.server';
@@ -81,6 +79,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   console.log('userId:', user.id);
+  //session uid:
+  const session_uid = Math.random().toString(36).substring(2) + Date.now().toString(36);
   // 4 . Build one session that contains both WorkOS and analytics info
   return createUserSession(
     {
@@ -93,6 +93,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       analyticsUid:   uid,
       analyticsApiKey: apiKey,
       analyticsUsername: username,
+      sessionUid: session_uid,
     },
     '/',   // redirect home
   );

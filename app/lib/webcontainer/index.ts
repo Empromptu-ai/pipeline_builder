@@ -1286,3 +1286,288 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
   const container = await webcontainer;
   return deployToGitHub(container, config);
 }
+
+// Function to scan and modify files in WebContainer based on criteria
+export async function scanAndModifyFiles(
+  container: WebContainer,
+  options: {
+    // Criteria for which files to process
+    fileExtensions?: string[]; // e.g., ['.js', '.ts', '.jsx', '.tsx']
+    fileNamePatterns?: RegExp[]; // e.g., [/component/i, /\.config\./]
+    excludePatterns?: string[]; // e.g., ['node_modules', '.git']
+    
+    // Content matching criteria
+    contentMatches?: {
+      regex: RegExp;
+      replacement: string | ((match: string, ...groups: any[]) => string);
+    }[];
+    
+    // Custom transformation function
+    transform?: (content: string, filePath: string) => string | Promise<string>;
+    
+    // Options
+    dryRun?: boolean; // If true, only log what would be changed without making changes
+    logChanges?: boolean; // If true, log all changes made
+  }
+): Promise<{
+  filesScanned: number;
+  filesModified: number;
+  modifications: Array<{
+    filePath: string;
+    changeType: string;
+    details: string;
+  }>;
+}> {
+  const {
+    fileExtensions = [],
+    fileNamePatterns = [],
+    excludePatterns = ['node_modules', '.git', 'dist', 'build'],
+    contentMatches = [],
+    transform,
+    dryRun = false,
+    logChanges = true
+  } = options;
+
+  const modifications: Array<{
+    filePath: string;
+    changeType: string;
+    details: string;
+  }> = [];
+
+  let filesScanned = 0;
+  let filesModified = 0;
+
+  try {
+    console.log('Starting file scan and modification...');
+    
+    // Recursively collect all file paths
+    const allFilePaths: string[] = [];
+    async function collectFiles(dirPath: string) {
+      const entries = await container.fs.readdir(dirPath, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dirPath, entry.name);
+        if (entry.isFile()) {
+          // Check if file should be excluded
+          const shouldExclude = excludePatterns.some(pattern => fullPath.includes(pattern));
+          if (!shouldExclude) {
+            allFilePaths.push(fullPath);
+          }
+        } else if (entry.isDirectory()) {
+          // Skip excluded directories
+          const shouldExclude = excludePatterns.some(pattern => fullPath.includes(pattern));
+          if (!shouldExclude) {
+            await collectFiles(fullPath);
+          }
+        }
+      }
+    }
+    await collectFiles(process.cwd());
+    
+    console.log(`Found ${allFilePaths.length} files to scan`);
+    
+    // Process each file
+    for (const filePath of allFilePaths) {
+      try {
+        // Check if file matches our criteria
+        const fileName = path.basename(filePath);
+        const fileExt = path.extname(filePath);
+        
+        // File extension filter
+        if (fileExtensions.length > 0 && !fileExtensions.includes(fileExt)) {
+          continue;
+        }
+        
+        // File name pattern filter
+        if (fileNamePatterns.length > 0 && !fileNamePatterns.some(pattern => pattern.test(fileName))) {
+          continue;
+        }
+        
+        filesScanned++;
+        console.log(`Scanning file: ${filePath}`);
+        
+        // Read file content
+        let content: string;
+        try {
+          content = await container.fs.readFile(filePath, 'utf8');
+        } catch (error) {
+          console.warn(`Skipping binary file: ${filePath}`);
+          continue;
+        }
+        
+        let modifiedContent = content;
+        let hasChanges = false;
+        const fileModifications: string[] = [];
+        
+        // Apply regex-based content matches
+        for (const match of contentMatches) {
+          const originalContent = modifiedContent;
+          if (typeof match.replacement === 'string') {
+            modifiedContent = modifiedContent.replace(match.regex, match.replacement);
+          } else {
+            modifiedContent = modifiedContent.replace(match.regex, match.replacement);
+          }
+          
+          if (originalContent !== modifiedContent) {
+            hasChanges = true;
+            const matchCount = (originalContent.match(match.regex) || []).length;
+            fileModifications.push(`Regex replacement: ${matchCount} matches for ${match.regex}`);
+          }
+        }
+        
+        // Apply custom transformation
+        if (transform) {
+          const originalContent = modifiedContent;
+          modifiedContent = await transform(modifiedContent, filePath);
+          
+          if (originalContent !== modifiedContent) {
+            hasChanges = true;
+            fileModifications.push('Custom transformation applied');
+          }
+        }
+        
+        // Save changes if any were made
+        if (hasChanges) {
+          filesModified++;
+          
+          if (!dryRun) {
+            await container.fs.writeFile(filePath, modifiedContent, 'utf8');
+            if (logChanges) {
+              console.log(`✓ Modified: ${filePath}`);
+              fileModifications.forEach(mod => console.log(`  - ${mod}`));
+            }
+          } else {
+            if (logChanges) {
+              console.log(`[DRY RUN] Would modify: ${filePath}`);
+              fileModifications.forEach(mod => console.log(`  - ${mod}`));
+            }
+          }
+          
+          modifications.push({
+            filePath,
+            changeType: dryRun ? 'dry-run' : 'modified',
+            details: fileModifications.join('; ')
+          });
+        }
+        
+      } catch (error) {
+        console.warn(`Error processing file ${filePath}:`, error);
+      }
+    }
+    
+    console.log(`\nScan complete:`);
+    console.log(`- Files scanned: ${filesScanned}`);
+    console.log(`- Files modified: ${filesModified}`);
+    
+    return {
+      filesScanned,
+      filesModified,
+      modifications
+    };
+    
+  } catch (error) {
+    console.error('Failed to scan and modify files:', error);
+    throw error;
+  }
+}
+
+
+// Usage functions for common scenarios:
+
+// Replace all instances of a string/pattern across JavaScript/TypeScript files
+export async function replaceInCodeFiles(
+  container: WebContainer,
+  searchPattern: string | RegExp,
+  replacement: string,
+  options: { dryRun?: boolean; logChanges?: boolean } = {}
+) {
+  return await scanAndModifyFiles(container, {
+    fileExtensions: ['.js', '.ts', '.jsx', '.tsx', '.vue', '.svelte'],
+    contentMatches: [{
+      regex: typeof searchPattern === 'string' ? new RegExp(searchPattern, 'g') : searchPattern,
+      replacement
+    }],
+    ...options
+  });
+}
+
+// Add import statements to all component files
+export async function addImportsToComponents(
+  container: WebContainer,
+  importStatement: string,
+  options: { dryRun?: boolean; logChanges?: boolean } = {}
+) {
+  return await scanAndModifyFiles(container, {
+    fileExtensions: ['.jsx', '.tsx', '.vue', '.svelte'],
+    transform: (content: string, filePath: string) => {
+      // Add import at the top if it doesn't already exist
+      if (!content.includes(importStatement)) {
+        const lines = content.split('\n');
+        const importIndex = lines.findIndex(line => line.trim().startsWith('import'));
+        if (importIndex !== -1) {
+          lines.splice(importIndex, 0, importStatement);
+        } else {
+          lines.unshift(importStatement);
+        }
+        return lines.join('\n');
+      }
+      return content;
+    },
+    ...options
+  });
+}
+
+// Update configuration files with new settings
+export async function updateConfigFiles(
+  container: WebContainer,
+  configUpdates: Record<string, any>,
+  options: { dryRun?: boolean; logChanges?: boolean } = {}
+) {
+  return await scanAndModifyFiles(container, {
+    fileNamePatterns: [/\.config\./i, /package\.json$/i],
+    transform: async (content: string, filePath: string) => {
+      try {
+        const config = JSON.parse(content);
+        const updatedConfig = { ...config, ...configUpdates };
+        return JSON.stringify(updatedConfig, null, 2);
+      } catch (error) {
+        console.warn(`Could not parse JSON in ${filePath}:`, error);
+        return content;
+      }
+    },
+    ...options
+  });
+}
+
+
+
+// // Example 1: Replace all instances of a library import
+// await replaceInCodeFiles(
+//   webcontainer,
+//   /import.*from ['"]old-library['"];?/g,
+//   "import { newFunction } from 'new-library';",
+//   { dryRun: true, logChanges: true }
+// );
+
+// // Example 2: Add a CSS class to all React components
+// await scanAndModifyFiles(webcontainer, {
+//   fileExtensions: ['.jsx', '.tsx'],
+//   contentMatches: [{
+//     regex: /<div([^>]*?)>/g,
+//     replacement: '<div$1 className="enhanced-component">'
+//   }],
+//   dryRun: false
+// });
+
+// // Example 3: Custom transformation to add error boundaries
+// await scanAndModifyFiles(webcontainer, {
+//   fileExtensions: ['.jsx', '.tsx'],
+//   transform: (content, filePath) => {
+//     if (content.includes('export default function') && !content.includes('ErrorBoundary')) {
+//       return content.replace(
+//         'export default function',
+//         'import ErrorBoundary from "./ErrorBoundary";\n\nexport default function'
+//       );
+//     }
+//     return content;
+//   }
+// });

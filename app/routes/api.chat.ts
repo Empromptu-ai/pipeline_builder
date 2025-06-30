@@ -1,12 +1,15 @@
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { MAX_RESPONSE_SEGMENTS, MAX_TOKENS } from '~/lib/.server/llm/constants';
-import { CONTINUE_PROMPT, API_CHATBOT_PROMPT,  INJECTED_PROMPT_1 , INJECTED_PROMPT_2 } from '~/lib/.server/llm/prompts';
+// import { CONTINUE_PROMPT, API_CHATBOT_PROMPT,  INJECTED_PROMPT_1 , INJECTED_PROMPT_2, getApiChatbotPrompt , getInjectedPrompt1} from '~/lib/.server/llm/prompts';
+import { CONTINUE_PROMPT, INJECTED_PROMPT_2, getApiChatbotPrompt , getInjectedPrompt1} from '~/lib/.server/llm/prompts';
 import { streamText, type Messages, type StreamingOptions } from '~/lib/.server/llm/stream-text';
 import SwitchableStream from '~/lib/.server/llm/switchable-stream';
 import { streamText as _streamText, convertToCoreMessages } from 'ai';
 import { getAPIKey } from '~/lib/.server/llm/api-key';
 import { getAnthropicModel } from '~/lib/.server/llm/model';
+import { getUserSession } from '~/utils/session.server';
 // import { generateSessionId } from '~/utils/sessionId';
+import { createCookieSessionStorage } from "@remix-run/node";
 
 const estimateTokens = (text: string): number => {
   // Rough estimation: ~4 characters per token for English text
@@ -80,6 +83,43 @@ export async function action(args: ActionFunctionArgs) {
 async function chatAction({ context, request }: ActionFunctionArgs) {
   const { messages } = await request.json<{ messages: Messages }>();
 
+  console.log(`The request Object: ${request}`);
+  console.log(`The request Object messages: ${messages}`);
+  console.log(`The request Object: ${JSON.stringify(request)}`);
+  console.log(`The request Object messages: ${JSON.stringify(messages, null, 2)}`);
+  console.log('The request Object:', request);
+  console.log('The request Object messages:', messages);
+
+  // get the user session and pull the session UID out of it.
+  // (Get sessionUid from the __session cookie)
+  // const cookieHeader = request.headers.get("Cookie");
+  // let sessionUid = null;
+  // let description;   
+
+  // const session_for_cookie = await getUserSession(request.headers.get("Cookie"));
+  const session_for_cookie = await getUserSession(request);
+  const description = session_for_cookie?.sessionUid; // get("sessionUid"); 
+
+
+  // if (cookieHeader) {
+  //   //const sessionMatch = cookieHeader.match(/__session=([^;]+)/);
+  //   if (sessionMatch) {
+  //     try {
+  //       const sessionData = JSON.parse(atob(decodeURIComponent(sessionMatch[1])));
+  //       const description = sessionData.userSession?.userId;
+  //     } catch (error) {
+  //       console.error('Error decoding session:', error);
+  //     }
+  //   }
+  // }
+
+
+
+  // const userSession = await getUserSession(request);
+  // const description = userSession.sessionUid;
+
+  console.log('Got description in api.chat.ts', description);
+
   // Generate a unique session ID for this conversation
   // const sessionId = generateSessionId();
   // console.log(`Generated session ID: ${sessionId}`);
@@ -110,7 +150,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
             const updatedMessages: Messages = [...managedMessages, { role: 'assistant' as const, content }];
             
             // Inject the first prompt immediately
-            const injectedMessages = injectSinglePrompt(updatedMessages, 1);
+            const injectedMessages = injectSinglePrompt(updatedMessages, 1, description);
             
             // Continue with original agent using injected prompt
             const originalAgentOptions: StreamingOptions = {
@@ -121,7 +161,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
                   console.log('First prompt response complete, injecting second prompt...');
                   
                   const messagesWithFirstResponse: Messages = [...injectedMessages, { role: 'assistant' as const, content: responseContent }];
-                  const secondInjectedMessages = injectSinglePrompt(messagesWithFirstResponse, 2);
+                  const secondInjectedMessages = injectSinglePrompt(messagesWithFirstResponse, 2, description);
                   
                   // Continue with second prompt
                   const secondPromptOptions: StreamingOptions = {
@@ -174,12 +214,14 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           console.log(`Reached max token limit (${MAX_TOKENS}): Continuing message (${switchesLeft} switches left)`);
           managedMessages.push({ role: 'assistant' as const, content });
           managedMessages.push({ role: 'user' as const, content: CONTINUE_PROMPT });
-          const result = await streamTextWithYourAgent(managedMessages, context.cloudflare.env, yourAgentOptions);
+          console.log('About to Steam text with description:', description);
+          const result = await streamTextWithYourAgent(managedMessages, context.cloudflare.env, yourAgentOptions, description);
           return stream.switchSource(result.toAIStream());
         },
       };
-      
-      const result = await streamTextWithYourAgent(managedMessages, context.cloudflare.env, yourAgentOptions);
+
+      console.log('About to Steam text with description:', description);
+      const result = await streamTextWithYourAgent(managedMessages, context.cloudflare.env, yourAgentOptions, description);
       stream.switchSource(result.toAIStream());
       
     } else {
@@ -224,10 +266,10 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 }
 
 // Simplified helper functions since we're handling injection inline now
-function streamTextWithYourAgent(messages: Messages, env: Env, options?: StreamingOptions) {
+function streamTextWithYourAgent(messages: Messages, env: Env, options?: StreamingOptions, description: string) {
   return _streamText({
     model: getAnthropicModel(getAPIKey(env)),
-    system: getYourAgentSystemPrompt(),
+    system: getYourAgentSystemPrompt(description),
     maxTokens: MAX_TOKENS,
     headers: {
       'anthropic-beta': 'max-tokens-3-5-sonnet-2024-07-15',
@@ -237,9 +279,10 @@ function streamTextWithYourAgent(messages: Messages, env: Env, options?: Streami
   });
 }
 
-function getYourAgentSystemPrompt(): string {
-  // return API_CHATBOT_PROMPT;
-  return API_CHATBOT_PROMPT; //(sessionId);
+function getYourAgentSystemPrompt(description: string): string {
+  //return API_CHATBOT_PROMPT; //(sessionId);
+  console.log('getYourAgentSystemPrompt with description:', description);
+  return getApiChatbotPrompt(description); // should include current sessionId
 }
 
 function checkIfAlreadyTransitioned(messages: Messages): boolean {
@@ -268,7 +311,7 @@ function checkIfShouldTransition(responseText: string): boolean {
   return responseText.includes('[final]');
 }
 
-function injectSinglePrompt(messages: Messages, promptNumber: 1 | 2): Messages {
+function injectSinglePrompt(messages: Messages, promptNumber: 1 | 2, description: string): Messages {
   const injectedMessages = [...messages];
   console.log(`Injecting prompt ${promptNumber} into messages`);
   
@@ -276,7 +319,7 @@ function injectSinglePrompt(messages: Messages, promptNumber: 1 | 2): Messages {
     injectedMessages.push({ 
       role: 'user' as const, 
       // content:  INJECTED_PROMPT_1 //'[INJECTED_PROMPT_1] Please review the API spec and be absolutely sure that you are calling those functions with the appropriate data formats, for example ensuring that you are sending object_name values, encapsulating input correctly in json, and using the exact function endpoints as they were defined.' 
-      content:  INJECTED_PROMPT_1   // (sessionId) //
+      content:  getInjectedPrompt1(description) // INJECTED_PROMPT_1   // (sessionId) //
     });
   } else {
     injectedMessages.push({ 

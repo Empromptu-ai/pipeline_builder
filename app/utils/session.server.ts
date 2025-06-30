@@ -29,6 +29,7 @@ export interface UserSession {
   analyticsUid?: string;
   analyticsApiKey?: string;
   analyticsUsername?: string;
+  sessionUid?: string;
 }
 
 export async function createUserSession(
