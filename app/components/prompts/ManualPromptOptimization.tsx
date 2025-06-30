@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
+import { useState, useMemo } from 'react';
+import { useParams } from '@remix-run/react';
 import { Button } from '~/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '~/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '~/components/ui/card';
+import { toast } from 'react-toastify';
+import { Zap, Loader2 } from 'lucide-react';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '~/components/ui/table';
 import { Badge } from '~/components/ui/badge';
+import Spinner from '~/components/ui/spinner';
+import { RadioGroup, RadioGroupItem } from '~/components/ui/radio-group';
 import { Checkbox } from '~/components/ui/checkbox';
-import { useUser } from '~/hooks/useUser';
+import type { CheckedState } from '@radix-ui/react-checkbox';
 import {
   evaluateExperiment,
   getResultsOfEvaluateRun,
@@ -19,8 +24,19 @@ import {
   type EvaluateResults,
   type OptimizeResults,
   type Model,
+  type EvaluateEvent,
+  type OptimizeEvent,
 } from '~/lib/services/optimizer';
-import { Zap, Plus, Loader2 } from 'lucide-react';
+import { useUser } from '~/hooks/useUser';
+import CreatePromptDialog from '~/components/prompts/CreatePromptDialog';
+import CreateInputDialog from '~/components/prompts/CreateInputDialog';
+import { varNamesFromPrompt } from '~/lib/helpers/var-names';
+import ViewPromptDialogLink from '~/components/prompts/ViewPromptDialogLink';
+import ViewInputDialogLink from '~/components/inputs/ViewInputDialogLink';
+import ViewEvaluationDialogLink from '~/components/evaluations/ViewEvaluationDialogLink';
+import CreateEvaluationDialog from '~/components/prompts/CreateEvaluationDialog';
+import ViewEventDialogLink from '~/components/events/ViewEventDialogLink';
+import ViewEventCompareDialogLink from '~/components/events/ViewEventCompareDialogLink';
 
 interface ManualPromptOptimizationProps {
   project: Project | null;
@@ -32,6 +48,7 @@ interface ManualPromptOptimizationProps {
   onCreatePrompt: () => void;
   onCreateEvaluation: () => void;
   onCreateInput: () => void;
+  onRefreshPrompts?: () => void;
   loading: boolean;
 }
 
@@ -41,34 +58,164 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
   prompts,
   evaluations,
   inputs,
-  models: _models,
+  models,
   onCreatePrompt,
   onCreateEvaluation,
   onCreateInput,
+  onRefreshPrompts,
   loading,
 }) => {
+  const { projectId, taskId } = useParams();
   const { uid: userId } = useUser();
-  const [selectedPrompt, setSelectedPrompt] = useState<string>('');
+  const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
   const [selectedInputs, setSelectedInputs] = useState<string[]>([]);
   const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([]);
-  const [isEvaluating, setIsEvaluating] = useState(false);
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [evaluateResults, setEvaluateResults] = useState<EvaluateResults | null>(null);
-  const [optimizeResults, setOptimizeResults] = useState<OptimizeResults | null>(null);
   const [selectedEvaluationEvents, setSelectedEvaluationEvents] = useState<string[]>([]);
 
-  const canEvaluate = selectedPrompt && selectedInputs.length > 0 && selectedEvaluations.length > 0;
-  const canOptimize = selectedEvaluationEvents.length > 0;
+  const readyForEvaluation = selectedPrompt && selectedInputs.length > 0 && selectedEvaluations.length > 0;
 
-  //TODO: to-do tie in the real auth..
-  const userApiKey = 'placeholder';
+  const areAnyPrompts = prompts && prompts.length > 0;
+  const areAnyInputs = inputs && inputs.length > 0;
+  const areAnyEvaluations = evaluations && evaluations.length > 0;
 
-  const handleEvaluate = async () => {
-    if (!canEvaluate || !userId || !task?.id) {
+  const [evaluateRun, setEvaluateRun] = useState<EvaluateResults | null>(null);
+  const [optimizeRun, setOptimizeRun] = useState<OptimizeResults | null>(null);
+  const [evaluateIsRunning, setEvaluateIsRunning] = useState(false);
+  const [optimizeIsRunning, setOptimizeIsRunning] = useState(false);
+  const [stateAtLastEvaluate, setStateAtLastEvaluate] = useState<{
+    promptId: string;
+    evaluationIds: string[];
+  } | null>(null);
+
+  const areAnyEvaluateEvents = evaluateRun?.events && evaluateRun.events.length > 0;
+  const areAnyOptimizeEvents = optimizeRun?.events && optimizeRun.events.length > 0;
+  const areAnyOptimizeResults = optimizeRun?.prompt || areAnyOptimizeEvents;
+
+  const userApiKey = 'todo';
+
+  const availableVarNames = useMemo(() => {
+    if (!areAnyPrompts) {
+      return [];
+    }
+
+    if (selectedPrompt) {
+      return varNamesFromPrompt(prompts.find((p) => p.id === selectedPrompt)?.text);
+    }
+
+    return varNamesFromPrompt(prompts[0]?.text);
+  }, [prompts, selectedPrompt, areAnyPrompts]);
+
+  const allUsedVarNames = useMemo(() => {
+    if (!areAnyPrompts) {
+      return [];
+    }
+
+    const varNameSet = new Set<string>();
+    prompts.forEach((prompt) => {
+      varNamesFromPrompt(prompt.text).forEach((varName) => {
+        varNameSet.add(varName);
+      });
+    });
+
+    return Array.from(varNameSet);
+  }, [prompts, areAnyPrompts]);
+
+  const mapOptimizeEventToEvaluateEvent = useMemo(() => {
+    if (!optimizeRun?.events || !evaluateRun?.events || !optimizeRun?.events?.length || !evaluateRun?.events?.length) {
+      return {};
+    }
+
+    const mapping: Record<string, Partial<EvaluateEvent>> = {};
+    optimizeRun.events.forEach((oEvent) => {
+      const eMatch = evaluateRun.events.find((eEvent) => eEvent.input_id === oEvent.input_id);
+
+      if (eMatch) {
+        mapping[oEvent.event_id] = eMatch;
+      } else {
+        mapping[oEvent.event_id] = { response: '<none>', score: 0 };
+      }
+    });
+
+    return mapping;
+  }, [optimizeRun?.events, evaluateRun?.events]);
+
+  const recommendation = useMemo(() => {
+    if (
+      evaluateIsRunning ||
+      optimizeIsRunning ||
+      !optimizeRun?.events ||
+      !evaluateRun?.events ||
+      !optimizeRun?.events?.length ||
+      !evaluateRun?.events?.length
+    ) {
+      return null;
+    }
+
+    if (selectedInputs.length === 0) {
+      return null;
+    }
+
+    const origPromptData: Record<string, number> = {};
+    const newPromptData: Record<string, number> = {};
+
+    selectedInputs.forEach((inputId) => {
+      const evalEvent = evaluateRun.events.find((event) => event.input_id === inputId);
+      const optiEvent = optimizeRun.events.find((event) => event.input_id === inputId);
+
+      if (evalEvent && !optiEvent) {
+        origPromptData[inputId] = Number(evalEvent.score);
+      } else if (evalEvent && optiEvent) {
+        if (Number(evalEvent.score) > Number(optiEvent.score)) {
+          origPromptData[inputId] = Number(evalEvent.score);
+        } else {
+          newPromptData[inputId] = Number(optiEvent.score);
+        }
+      }
+    });
+
+    const origCount = Object.keys(origPromptData).length;
+    const origAvg = Object.values(origPromptData).reduce((val, sum) => val + sum, 0) / origCount;
+    const origRec = origCount > 0 && origAvg > 7;
+    const newCount = Object.keys(newPromptData).length;
+    const newAvg = Object.values(newPromptData).reduce((val, sum) => val + sum, 0) / newCount;
+    const newRec = newCount > 0 && newAvg > 7;
+
+    if (origRec && newRec) {
+      return 'both' as const;
+    }
+
+    if (newRec) {
+      return 'new' as const;
+    }
+
+    if (origRec) {
+      return 'orig' as const;
+    }
+
+    return 'none' as const;
+  }, [selectedInputs, optimizeRun?.events, evaluateRun?.events, evaluateIsRunning, optimizeIsRunning]);
+
+  const readyForOptimize = selectedEvaluationEvents.length > 0;
+
+  const clearOptimize = () => {
+    setOptimizeRun(null);
+    setSelectedEvaluationEvents([]);
+  };
+
+  const onEvaluateReset = () => {
+    clearOptimize();
+  };
+
+  const startEvaluate = async () => {
+    if (!readyForEvaluation || !userId || !task?.id || !selectedPrompt) {
       return;
     }
 
-    setIsEvaluating(true);
+    setEvaluateIsRunning(true);
+    setStateAtLastEvaluate({
+      promptId: selectedPrompt,
+      evaluationIds: selectedEvaluations,
+    });
 
     try {
       const result = await evaluateExperiment(
@@ -85,26 +232,30 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
           const evalResult = await getResultsOfEvaluateRun(userId, task.id, result.run_id);
 
           if (evalResult?.status === 'completed') {
-            setEvaluateResults(evalResult);
-          } else if (evalResult?.status !== 'failed') {
+            setEvaluateRun(evalResult);
+            setEvaluateIsRunning(false);
+          } else if (evalResult?.status === 'failed') {
+            setEvaluateIsRunning(false);
+          } else {
             setTimeout(pollResults, 2000);
           }
         };
         setTimeout(pollResults, 1000);
+      } else {
+        setEvaluateIsRunning(false);
       }
     } catch (error) {
       console.error('Error evaluating:', error);
-    } finally {
-      setIsEvaluating(false);
+      setEvaluateIsRunning(false);
     }
   };
 
-  const handleOptimize = async () => {
-    if (!canOptimize || !userId || !task?.id) {
+  const startOptimize = async () => {
+    if (!readyForOptimize || !userId || !task?.id) {
       return;
     }
 
-    setIsOptimizing(true);
+    setOptimizeIsRunning(true);
 
     try {
       const result = await runOptimization(
@@ -121,22 +272,26 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
           const optResult = await getResultsOfOptimizeRun(userId, task.id, result.run_id);
 
           if (optResult?.status === 'completed') {
-            setOptimizeResults(optResult);
-          } else if (optResult?.status !== 'failed') {
+            setOptimizeRun(optResult);
+            setOptimizeIsRunning(false);
+          } else if (optResult?.status === 'failed') {
+            setOptimizeIsRunning(false);
+          } else {
             setTimeout(pollResults, 2000);
           }
         };
         setTimeout(pollResults, 1000);
+      } else {
+        setOptimizeIsRunning(false);
       }
     } catch (error) {
       console.error('Error optimizing:', error);
-    } finally {
-      setIsOptimizing(false);
+      setOptimizeIsRunning(false);
     }
   };
 
-  const handlePromoteExperiment = async (choice: 'original' | 'new' | 'both') => {
-    if (!userId || !task?.id || !evaluateResults || !optimizeResults) {
+  const handlePromotePrompts = async (choice: 'original' | 'new' | 'both') => {
+    if (!userId || !task?.id || !evaluateRun || !optimizeRun || !selectedPrompt || !stateAtLastEvaluate) {
       return;
     }
 
@@ -146,31 +301,55 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
 
       switch (choice) {
         case 'original': {
-          runIds = [evaluateResults.run_id];
-          promptIds = [selectedPrompt];
+          runIds = [evaluateRun.run_id];
+          promptIds = [stateAtLastEvaluate.promptId];
           break;
         }
         case 'new': {
-          if (optimizeResults.prompt) {
-            runIds = [optimizeResults.run_id];
-            promptIds = [optimizeResults.prompt.prompt_id];
+          if (optimizeRun.prompt) {
+            runIds = [optimizeRun.run_id];
+            promptIds = [optimizeRun.prompt.prompt_id];
           }
 
           break;
         }
         case 'both': {
-          if (optimizeResults.prompt) {
-            runIds = [evaluateResults.run_id, optimizeResults.run_id];
-            promptIds = [selectedPrompt, optimizeResults.prompt.prompt_id];
+          if (optimizeRun.prompt) {
+            runIds = [evaluateRun.run_id, optimizeRun.run_id];
+            promptIds = [stateAtLastEvaluate.promptId, optimizeRun.prompt.prompt_id];
           }
 
           break;
         }
       }
 
-      await promoteExperiment(userId, userApiKey, task.id, runIds, promptIds, selectedEvaluations);
+      const result = await promoteExperiment(
+        userId,
+        userApiKey,
+        task.id,
+        runIds,
+        promptIds,
+        stateAtLastEvaluate.evaluationIds,
+      );
+
+      if (!result || result.status !== 'success') {
+        toast.error('Unable to promote this experiment', {
+          position: 'bottom-right',
+          autoClose: 3000,
+        });
+        return;
+      }
+
+      toast.success('You have promoted this experiment.', {
+        position: 'bottom-right',
+        autoClose: 3000,
+      });
     } catch (error) {
       console.error('Error promoting experiment:', error);
+      toast.error('Unable to promote this experiment', {
+        position: 'bottom-right',
+        autoClose: 3000,
+      });
     }
   };
 
@@ -203,10 +382,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                     <CardTitle className="text-lg">Select a Prompt</CardTitle>
                     <CardDescription>Which prompt do you want to evaluate and optimize?</CardDescription>
                   </div>
-                  <Button onClick={onCreatePrompt} className="bg-purple-600 hover:bg-purple-700 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Prompt
-                  </Button>
+                  <CreatePromptDialog onCreate={onCreatePrompt} models={models} onRefresh={onRefreshPrompts} />
                 </div>
               </CardHeader>
               <CardContent>
@@ -222,7 +398,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                     {prompts.map((prompt, index) => (
                       <div
                         key={prompt.id}
-                        className={`p-3 border rounded-md cursor-pointer ${
+                        className={`p-3 border rounded-md ${
                           selectedPrompt === prompt.id ? 'border-purple-400 bg-purple-50' : 'hover:bg-accent/50'
                         }`}
                         onClick={() => setSelectedPrompt(prompt.id)}
@@ -233,6 +409,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                             checked={selectedPrompt === prompt.id}
                             onChange={() => setSelectedPrompt(prompt.id)}
                             className="h-4 w-4 text-purple-600 border-purple-600 focus:ring-purple-500"
+                            onClick={(e) => e.stopPropagation()}
                           />
                           <div className="flex-1">
                             <div className="font-medium">Prompt-{index + 1}</div>
@@ -240,6 +417,21 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                               {prompt.text.substring(0, 200)}
                             </div>
                           </div>
+                          <ViewPromptDialogLink prompt={prompt} onDelete={onRefreshPrompts}>
+                            {(openDialog) => (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openDialog();
+                                }}
+                                className="text-xs"
+                              >
+                                Modify
+                              </Button>
+                            )}
+                          </ViewPromptDialogLink>
                         </div>
                       </div>
                     ))}
@@ -258,10 +450,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                         We'll score your prompt for each input you select, then optimize to improve those scores!
                       </CardDescription>
                     </div>
-                    <Button onClick={onCreateInput} className="bg-purple-600 hover:bg-purple-700 text-white">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Input
-                    </Button>
+                    <CreateInputDialog onCreateInput={() => onCreateInput()} varNames={availableVarNames} />
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -270,7 +459,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                       <p className="text-muted-foreground mb-4">
                         No test inputs available. Create your first test input.
                       </p>
-                      <Button onClick={onCreateInput}>Create First Input</Button>
+                      <CreateInputDialog onCreateInput={() => onCreateInput()} varNames={availableVarNames} />
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -290,9 +479,11 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                             <div className="font-medium">Input-{index + 1}</div>
                             <div className="text-sm text-muted-foreground">
                               {Object.entries(input.inputs).map(([key, value]) => (
-                                <div key={key}>
-                                  {key}: {value.substring(0, 100)}...
-                                </div>
+                                <ViewInputDialogLink key={key} input={input}>
+                                  <div className="cursor-pointer hover:text-purple-600">
+                                    {key}: {value.substring(0, 100)}...
+                                  </div>
+                                </ViewInputDialogLink>
                               ))}
                             </div>
                           </div>
@@ -313,10 +504,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                       Choose evaluations to capture everything you expect from a great AI response.
                     </CardDescription>
                   </div>
-                  <Button onClick={onCreateEvaluation} className="bg-purple-600 hover:bg-purple-700 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Evaluation
-                  </Button>
+                  <CreateEvaluationDialog onCreateEval={() => onCreateEvaluation()} />
                 </div>
               </CardHeader>
               <CardContent>
@@ -325,30 +513,36 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                     <p className="text-muted-foreground mb-4">
                       No evaluations available. Create your first evaluation.
                     </p>
-                    <Button onClick={onCreateEvaluation}>Create First Evaluation</Button>
+                    <CreateEvaluationDialog onCreateEval={() => onCreateEvaluation()} />
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {evaluations.map((evaluation) => (
-                      <div key={evaluation.id} className="flex items-center space-x-2 p-3 border rounded-md">
-                        <Checkbox
-                          checked={selectedEvaluations.includes(evaluation.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedEvaluations((prev) => [...prev, evaluation.id]);
-                            } else {
-                              setSelectedEvaluations((prev) => prev.filter((id) => id !== evaluation.id));
-                            }
-                          }}
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium">{evaluation.name}</div>
-                          <div className="text-sm text-muted-foreground line-clamp-2">
-                            {evaluation.text.substring(0, 200)}
+                  <div className="max-h-[400px] overflow-y-auto">
+                    <div className="space-y-2">
+                      {evaluations.map((evaluation) => (
+                        <div key={evaluation.id} className="flex items-center space-x-2 p-3 border rounded-md">
+                          <Checkbox
+                            checked={selectedEvaluations.includes(evaluation.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedEvaluations((prev) => [...prev, evaluation.id]);
+                              } else {
+                                setSelectedEvaluations((prev) => prev.filter((id) => id !== evaluation.id));
+                              }
+                            }}
+                          />
+                          <div className="flex-1">
+                            <ViewEvaluationDialogLink evaluation={evaluation}>
+                              <div className="cursor-pointer hover:text-purple-600">
+                                <div className="font-medium">{evaluation.name}</div>
+                                <div className="text-sm text-muted-foreground line-clamp-2">
+                                  {evaluation.text.substring(0, 200)}
+                                </div>
+                              </div>
+                            </ViewEvaluationDialogLink>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -356,13 +550,13 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
 
             <div className="flex items-center gap-3">
               <Button
-                onClick={handleEvaluate}
-                disabled={!canEvaluate || isEvaluating}
+                onClick={startEvaluate}
+                disabled={!readyForEvaluation || evaluateIsRunning}
                 className="bg-purple-600 hover:bg-purple-700 text-white disabled:bg-gray-400"
               >
-                {isEvaluating ? (
+                {evaluateIsRunning ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Spinner size="sm" className="mr-2" />
                     Evaluating...
                   </>
                 ) : (
@@ -372,7 +566,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                   </>
                 )}
               </Button>
-              {!canEvaluate && (
+              {!readyForEvaluation && (
                 <p className="text-sm text-red-500">Please select a prompt, input, and evaluation to continue</p>
               )}
             </div>
@@ -380,7 +574,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
         </CardContent>
       </Card>
 
-      {evaluateResults && (
+      {areAnyEvaluateEvents && (
         <Card>
           <CardHeader>
             <CardTitle>Step 2: Optimize</CardTitle>
@@ -399,52 +593,114 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead></TableHead>
-                        <TableHead>Input</TableHead>
-                        <TableHead>Response</TableHead>
-                        <TableHead>Score</TableHead>
+                        <TableHead className="w-12"></TableHead>
+                        <TableHead className="w-48">Messages</TableHead>
+                        <TableHead className="w-64">AI Response</TableHead>
+                        <TableHead className="w-24 text-center">Score</TableHead>
+                        <TableHead className="w-80">Score Explanation</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {evaluateResults.events.map((event) => (
-                        <TableRow key={event.event_id}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedEvaluationEvents.includes(event.event_id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedEvaluationEvents((prev) => [...prev, event.event_id]);
-                                } else {
-                                  setSelectedEvaluationEvents((prev) => prev.filter((id) => id !== event.event_id));
-                                }
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="max-w-xs truncate">
-                              {inputs.find((i) => i.id === event.input_id)?.inputs?.input || 'N/A'}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="max-w-xs truncate">{event.response}</div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={Number(event.score) > 7 ? 'default' : 'destructive'}>
-                              {Number(event.score).toFixed(1)}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {evaluateRun!.events.map((event) => {
+                        const input = inputs.find((i) => i.id === event.input_id);
+                        const inputText = input ? Object.values(input.inputs).join(', ') : 'N/A';
+
+                        let scoreExplained;
+                        let scoreExplanationText = 'No explanation available';
+
+                        if (event.score_explained) {
+                          if (typeof event.score_explained === 'string') {
+                            try {
+                              scoreExplained = JSON.parse(event.score_explained);
+                              scoreExplanationText = Object.entries(scoreExplained)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join(', ');
+                            } catch {
+                              scoreExplained = undefined;
+                              scoreExplanationText = String(event.score_explained);
+                            }
+                          } else if (typeof event.score_explained === 'object') {
+                            scoreExplained = event.score_explained;
+                            scoreExplanationText = Object.entries(event.score_explained)
+                              .map(([key, value]) => `${key}: ${value}`)
+                              .join(', ');
+                          }
+                        }
+
+                        return (
+                          <TableRow key={event.event_id} className="hover:bg-accent/50">
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedEvaluationEvents.includes(event.event_id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedEvaluationEvents((prev) => [...prev, event.event_id]);
+                                  } else {
+                                    setSelectedEvaluationEvents((prev) => prev.filter((id) => id !== event.event_id));
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <ViewEventDialogLink
+                                event={{
+                                  inputs: input?.inputs || {},
+                                  response: event.response,
+                                  score: event.score,
+                                  score_explained: scoreExplained,
+                                }}
+                              >
+                                <div className="max-w-xs truncate cursor-pointer hover:text-purple-600">
+                                  {inputText}
+                                </div>
+                              </ViewEventDialogLink>
+                            </TableCell>
+                            <TableCell>
+                              <ViewEventDialogLink
+                                event={{
+                                  inputs: input?.inputs || {},
+                                  response: event.response,
+                                  score: event.score,
+                                  score_explained: scoreExplained,
+                                }}
+                              >
+                                <div className="max-w-xs truncate cursor-pointer hover:text-purple-600">
+                                  {event.response}
+                                </div>
+                              </ViewEventDialogLink>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={Number(event.score) > 7 ? 'default' : 'destructive'}>
+                                {Number(event.score).toFixed(1)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <ViewEventDialogLink
+                                event={{
+                                  inputs: input?.inputs || {},
+                                  response: event.response,
+                                  score: event.score,
+                                  score_explained: scoreExplained,
+                                }}
+                              >
+                                <div className="max-w-xs truncate text-sm text-muted-foreground cursor-pointer hover:text-purple-600">
+                                  {scoreExplanationText}
+                                </div>
+                              </ViewEventDialogLink>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
 
               <div className="flex items-center gap-3">
-                <Button onClick={handleOptimize} disabled={!canOptimize || isOptimizing}>
-                  {isOptimizing ? (
+                <Button onClick={startOptimize} disabled={!readyForOptimize || optimizeIsRunning}>
+                  {optimizeIsRunning ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Spinner size="sm" className="mr-2" />
                       Optimizing...
                     </>
                   ) : (
@@ -454,7 +710,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                     </>
                   )}
                 </Button>
-                {!canOptimize && (
+                {!readyForOptimize && (
                   <p className="text-sm text-red-500">Please select low-performing results to optimize</p>
                 )}
               </div>
@@ -463,7 +719,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
         </Card>
       )}
 
-      {optimizeResults && (
+      {areAnyOptimizeResults && (
         <Card>
           <CardHeader>
             <CardTitle>Step 3: Compare and Promote</CardTitle>
@@ -473,7 +729,7 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {optimizeResults.prompt && (
+              {optimizeRun?.prompt && (
                 <Card className="border border-muted">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg">New Prompt</CardTitle>
@@ -483,13 +739,13 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="p-4 bg-slate-100 rounded-md">
-                      <div className="text-sm">{optimizeResults.prompt.text}</div>
+                      <div className="text-sm">{optimizeRun.prompt.text}</div>
                     </div>
-                    {optimizeResults.summary && (
+                    {optimizeRun.summary && (
                       <div className="mt-4">
                         <h4 className="text-sm font-medium mb-2">Analysis</h4>
                         <div className="p-4 bg-blue-50 rounded-md">
-                          <div className="text-sm">{optimizeResults.summary}</div>
+                          <div className="text-sm">{optimizeRun.summary}</div>
                         </div>
                       </div>
                     )}
@@ -497,37 +753,200 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
                 </Card>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <Button onClick={() => handlePromoteExperiment('original')} className="w-full">
+              {areAnyOptimizeEvents && (
+                <Card className="border border-muted">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Comparison Results</CardTitle>
+                    <CardDescription>
+                      Compare how the original and new prompts performed on the same inputs.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[150px] max-w-[200px]">Messages</TableHead>
+                            <TableHead className="min-w-[200px] max-w-[300px]">Original AI Response</TableHead>
+                            <TableHead className="min-w-[200px] max-w-[300px]">New AI Response</TableHead>
+                            <TableHead className="w-32 text-center">Original Score</TableHead>
+                            <TableHead className="w-32 text-center">New Score</TableHead>
+                            <TableHead className="w-32 text-center">Better Prompt</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {optimizeRun!.events!.map((optimizeEvent) => {
+                            const evaluateEvent = mapOptimizeEventToEvaluateEvent[optimizeEvent.event_id];
+                            const input = inputs.find((i) => i.id === optimizeEvent.input_id);
+                            const inputText = input ? Object.values(input.inputs).join(', ') : 'N/A';
+                            const originalScore = evaluateEvent?.score ? Number(evaluateEvent.score) : 0;
+                            const newScore = Number(optimizeEvent.score);
+                            const betterPrompt =
+                              newScore > originalScore ? 'New' : originalScore > newScore ? 'Original' : 'Tie';
+
+                            return (
+                              <TableRow key={optimizeEvent.event_id} className="hover:bg-accent/50">
+                                <TableCell>
+                                  <ViewEventCompareDialogLink
+                                    event={{
+                                      inputs: input?.inputs || {},
+                                      response: optimizeEvent.response,
+                                      score: optimizeEvent.score,
+                                      origResponse: evaluateEvent?.response || 'N/A',
+                                      origScore: evaluateEvent?.score || 0,
+                                    }}
+                                  >
+                                    <div className="max-w-xs truncate cursor-pointer hover:text-purple-600">
+                                      {inputText}
+                                    </div>
+                                  </ViewEventCompareDialogLink>
+                                </TableCell>
+                                <TableCell>
+                                  <ViewEventCompareDialogLink
+                                    event={{
+                                      inputs: input?.inputs || {},
+                                      response: optimizeEvent.response,
+                                      score: optimizeEvent.score,
+                                      origResponse: evaluateEvent?.response || 'N/A',
+                                      origScore: evaluateEvent?.score || 0,
+                                    }}
+                                  >
+                                    <div className="max-w-xs truncate cursor-pointer hover:text-purple-600">
+                                      {evaluateEvent?.response || 'N/A'}
+                                    </div>
+                                  </ViewEventCompareDialogLink>
+                                </TableCell>
+                                <TableCell>
+                                  <ViewEventCompareDialogLink
+                                    event={{
+                                      inputs: input?.inputs || {},
+                                      response: optimizeEvent.response,
+                                      score: optimizeEvent.score,
+                                      origResponse: evaluateEvent?.response || 'N/A',
+                                      origScore: evaluateEvent?.score || 0,
+                                    }}
+                                  >
+                                    <div className="max-w-xs truncate cursor-pointer hover:text-purple-600">
+                                      {optimizeEvent.response}
+                                    </div>
+                                  </ViewEventCompareDialogLink>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={originalScore > 7 ? 'default' : 'destructive'}>
+                                    {originalScore.toFixed(1)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={newScore > 7 ? 'default' : 'destructive'}>
+                                    {newScore.toFixed(1)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      betterPrompt === 'New'
+                                        ? 'default'
+                                        : betterPrompt === 'Original'
+                                          ? 'secondary'
+                                          : 'outline'
+                                    }
+                                    className={betterPrompt === 'New' ? 'bg-green-600 text-white' : ''}
+                                  >
+                                    {betterPrompt}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Compare Results and Promote</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Check out how your new prompt is performing, compared with the original prompt.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-3">
+                    <Button
+                      onClick={() => handlePromotePrompts('original')}
+                      className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                    >
                       Promote Original Prompt
                     </Button>
-                    <CardDescription>
+                    <p className="text-xs text-muted-foreground">
                       Start using the Original Prompt as the primary prompt for this Task.
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Choose this option if you think your original prompt is showing good performance, but you do not
+                      like the performance of the optimized prompt.
+                    </p>
+                  </div>
 
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <Button onClick={() => handlePromoteExperiment('new')} className="w-full">
-                      Promote New Prompt
-                    </Button>
-                    <CardDescription>Start using the New Prompt as the primary prompt for this Task.</CardDescription>
-                  </CardHeader>
-                </Card>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Button
+                        onClick={() => handlePromotePrompts('new')}
+                        className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                      >
+                        Promote New Prompt
+                      </Button>
+                      <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                        Recommended
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Start using the New Prompt as the primary prompt for this Task.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Choose this option if you think the new prompt is showing good performance, but you do not like
+                      the performance of the original prompt.
+                    </p>
+                  </div>
 
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <Button onClick={() => handlePromoteExperiment('both')} className="w-full">
+                  <div className="space-y-3">
+                    <Button
+                      onClick={() => handlePromotePrompts('both')}
+                      className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                    >
                       Promote Both Prompts
                     </Button>
-                    <CardDescription>
-                      Use both prompts, and let the system choose the best one for each input.
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
+                    <p className="text-xs text-muted-foreground">
+                      Start using both prompts, and Empromptu will choose the best prompt for each input.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Sometimes your original prompt does great, but sometimes the new prompt does better. Combine the
+                      two into a Prompt Family, and Empromptu will help you get the most out of both!
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Button
+                      onClick={() => {
+                        setEvaluateRun(null);
+                        setOptimizeRun(null);
+                        setSelectedEvaluationEvents([]);
+                        setSelectedPrompt(null);
+                        setSelectedInputs([]);
+                        setSelectedEvaluations([]);
+                      }}
+                      className="w-full h-12 bg-red-500 hover:bg-red-600 text-white font-medium"
+                    >
+                      Start Over
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Choose this option if neither prompt is producing good enough results for it to be a solid
+                      foundation.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>

@@ -6,18 +6,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '~/components/ui/Dialog';
 import { Button } from '~/components/ui/button';
 import { Textarea } from '~/components/ui/textarea';
+import { Plus } from 'lucide-react';
 
 interface CreateInputDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   onCreateInput: (inputs: Record<string, string>) => void;
   varNames: string[];
 }
 
-const CreateInputDialog: React.FC<CreateInputDialogProps> = ({ open, onOpenChange, onCreateInput, varNames }) => {
+const CreateInputDialog: React.FC<CreateInputDialogProps> = ({ onCreateInput, varNames }) => {
+  const [open, setOpen] = useState(false);
   const [inputs, setInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -36,36 +37,51 @@ const CreateInputDialog: React.FC<CreateInputDialogProps> = ({ open, onOpenChang
     if (hasAllInputs) {
       onCreateInput(inputs);
       setInputs({});
-      onOpenChange(false);
+      setOpen(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Input
+        </Button>
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Test Input</DialogTitle>
-          <DialogDescription>Provide values for all prompt variables</DialogDescription>
+          <DialogTitle>Add New Input</DialogTitle>
+          <DialogDescription>Create a new input to test your AI system's performance.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          {varNames.map((varName) => (
-            <div key={varName}>
-              <label className="text-sm font-medium">{varName}</label>
-              <Textarea
-                placeholder={`Enter value for ${varName}...`}
-                value={inputs[varName] || ''}
-                onChange={(e) => setInputs((prev) => ({ ...prev, [varName]: e.target.value }))}
-                rows={3}
-              />
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium mb-4">Enter a value for each input variable</h3>
+            <div className="space-y-4">
+              {varNames.map((varName) => (
+                <div key={varName}>
+                  <label className="text-sm font-medium block mb-2">{varName}</label>
+                  <Textarea
+                    placeholder={`Enter an input value for {{ ${varName} }}`}
+                    value={inputs[varName] || ''}
+                    onChange={(e) => setInputs((prev) => ({ ...prev, [varName]: e.target.value }))}
+                    className="min-h-[120px] border-2 border-purple-300 focus:border-purple-500 rounded-md"
+                  />
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+        <DialogFooter className="flex justify-start gap-3">
+          <Button
+            onClick={handleSubmit}
+            disabled={!varNames.every((varName) => inputs[varName]?.trim())}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6"
+          >
+            Add Input
           </Button>
-          <Button onClick={handleSubmit} disabled={!varNames.every((varName) => inputs[varName]?.trim())}>
-            Create Input
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
           </Button>
         </DialogFooter>
       </DialogContent>

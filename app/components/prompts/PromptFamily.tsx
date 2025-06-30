@@ -2,7 +2,10 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
-import { Plus, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import CreatePromptDialog from '~/components/prompts/CreatePromptDialog';
+import ViewPromptDialogLink from '~/components/prompts/ViewPromptDialogLink';
+import type { Model } from '~/lib/services/optimizer';
 
 interface Prompt {
   id: string;
@@ -16,10 +19,12 @@ interface Prompt {
 interface PromptFamilyProps {
   prompts: Prompt[];
   onCreatePrompt: () => void;
+  onRefresh?: () => void;
+  models?: Model[];
   loading: boolean;
 }
 
-const PromptFamily: React.FC<PromptFamilyProps> = ({ prompts, onCreatePrompt, loading }) => {
+const PromptFamily: React.FC<PromptFamilyProps> = ({ prompts, onCreatePrompt, onRefresh, models = [], loading }) => {
   if (loading) {
     return (
       <Card>
@@ -41,20 +46,14 @@ const PromptFamily: React.FC<PromptFamilyProps> = ({ prompts, onCreatePrompt, lo
               could. Start with one prompt, and Empromptu will help you to build out the whole family.
             </CardDescription>
           </div>
-          <Button onClick={onCreatePrompt} className="bg-purple-600 hover:bg-purple-700 text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Prompt
-          </Button>
+          <CreatePromptDialog onCreate={onCreatePrompt} models={models} onRefresh={onRefresh} />
         </div>
       </CardHeader>
       <CardContent>
         {prompts.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-muted-foreground mb-4">No prompts yet. Create your first prompt to get started.</p>
-            <Button onClick={onCreatePrompt} className="bg-purple-600 hover:bg-purple-700 text-white">
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Prompt
-            </Button>
+            <CreatePromptDialog onCreate={onCreatePrompt} models={models} onRefresh={onRefresh} />
           </div>
         ) : (
           <div className="space-y-4">
@@ -69,6 +68,13 @@ const PromptFamily: React.FC<PromptFamilyProps> = ({ prompts, onCreatePrompt, lo
                     <span className="text-xs text-muted-foreground">
                       {prompt.model_name} • T={prompt.temperature}
                     </span>
+                    <ViewPromptDialogLink prompt={prompt} onDelete={onRefresh}>
+                      {(openDialog) => (
+                        <Button variant="outline" size="sm" onClick={openDialog} className="text-xs">
+                          Modify
+                        </Button>
+                      )}
+                    </ViewPromptDialogLink>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-3">{prompt.text}</p>

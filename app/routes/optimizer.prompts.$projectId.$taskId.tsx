@@ -10,9 +10,6 @@ import {
   getPromptsForTask,
   getEvalsAvailableForTask,
   getManualInputsForTask,
-  createPromptForTask,
-  createEvalForTask,
-  createManualInputForTask,
   getModels,
   type Project,
   type Task,
@@ -25,9 +22,6 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import PromptFamily from '~/components/prompts/PromptFamily';
 import ManualPromptOptimization from '~/components/prompts/ManualPromptOptimization';
 import AutomaticPromptOptimization from '~/components/prompts/AutomaticPromptOptimization';
-import CreatePromptDialog from '~/components/prompts/CreatePromptDialog';
-import CreateEvaluationDialog from '~/components/prompts/CreateEvaluationDialog';
-import CreateInputDialog from '~/components/prompts/CreateInputDialog';
 
 export default function PromptOptimization() {
   const { projectId, taskId } = useParams();
@@ -42,17 +36,6 @@ export default function PromptOptimization() {
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [createPromptOpen, setCreatePromptOpen] = useState(false);
-  const [createEvalOpen, setCreateEvalOpen] = useState(false);
-  const [createInputOpen, setCreateInputOpen] = useState(false);
-
-  const extractVarNames = (promptText: string): string[] => {
-    const matches = promptText.match(/\{(\w+)\}/g);
-    return matches ? matches.map((match) => match.slice(1, -1)) : [];
-  };
-
-  const varNames = prompts.length > 0 ? extractVarNames(prompts[0].text) : ['input'];
-
   useEffect(() => {
     const decodedProjectId = projectId ? decodeURIComponent(projectId) : projectId;
     const decodedTaskId = taskId ? decodeURIComponent(taskId) : taskId;
@@ -65,8 +48,6 @@ export default function PromptOptimization() {
       try {
         setLoading(true);
 
-        const startTime = Date.now();
-
         const [projectData, taskData, promptsData, evaluationsData, inputsData, modelsData] = await Promise.all([
           getProject(userId, decodedProjectId),
           getTask(userId, decodedTaskId),
@@ -75,8 +56,6 @@ export default function PromptOptimization() {
           getManualInputsForTask(userId, decodedTaskId),
           getModels(userId),
         ]);
-
-        const endTime = Date.now();
 
         setProject(projectData);
         setTask(taskData);
@@ -143,6 +122,19 @@ export default function PromptOptimization() {
     }
   };
 
+  const refreshPrompts = async () => {
+    if (!userId || !taskId) {
+      return;
+    }
+
+    try {
+      const promptsData = await getPromptsForTask(userId, taskId);
+      setPrompts(promptsData || []);
+    } catch (error) {
+      console.error('Error refreshing prompts:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-full p-6 flex items-center justify-center">
@@ -190,7 +182,13 @@ export default function PromptOptimization() {
         </TabsList>
 
         <TabsContent value="family" className="space-y-6">
-          <PromptFamily prompts={prompts} onCreatePrompt={() => setCreatePromptOpen(true)} loading={loading} />
+          <PromptFamily
+            prompts={prompts}
+            onCreatePrompt={refreshPrompts}
+            onRefresh={refreshPrompts}
+            models={models}
+            loading={loading}
+          />
         </TabsContent>
 
         <TabsContent value="manual" className="space-y-6">
@@ -201,9 +199,10 @@ export default function PromptOptimization() {
             evaluations={evaluations}
             inputs={inputs}
             models={models}
-            onCreatePrompt={() => setCreatePromptOpen(true)}
-            onCreateEvaluation={() => setCreateEvalOpen(true)}
-            onCreateInput={() => setCreateInputOpen(true)}
+            onCreatePrompt={refreshPrompts}
+            onCreateEvaluation={refreshPrompts}
+            onCreateInput={refreshPrompts}
+            onRefreshPrompts={refreshPrompts}
             loading={loading}
           />
         </TabsContent>
@@ -238,26 +237,6 @@ export default function PromptOptimization() {
           )}
         </TabsContent>
       </Tabs>
-
-      <CreatePromptDialog
-        open={createPromptOpen}
-        onOpenChange={setCreatePromptOpen}
-        onCreatePrompt={handleCreatePrompt}
-        models={models}
-      />
-
-      <CreateEvaluationDialog
-        open={createEvalOpen}
-        onOpenChange={setCreateEvalOpen}
-        onCreateEval={handleCreateEvaluation}
-      />
-
-      <CreateInputDialog
-        open={createInputOpen}
-        onOpenChange={setCreateInputOpen}
-        onCreateInput={handleCreateInput}
-        varNames={varNames}
-      />
     </div>
   );
 }

@@ -124,7 +124,7 @@ const EndUserInputLog: React.FC<EndUserInputLogProps> = ({ inputs, isLoading }) 
                     <TableHead className="min-w-[150px]">Delivered Prompt</TableHead>
                     <TableHead className="min-w-[150px]">Score Reasoning</TableHead>
                     <TableHead className="min-w-[80px]">Score</TableHead>
-                    <TableHead className="min-w-[100px]">Actions</TableHead>
+                    {/* <TableHead className="min-w-[100px]">Actions</TableHead> */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -154,12 +154,12 @@ const EndUserInputLog: React.FC<EndUserInputLogProps> = ({ inputs, isLoading }) 
                         </div>
                       </TableCell>
                       <TableCell>{input.eval_score || '<none>'}</TableCell>
-                      <TableCell>
+                      {/* <TableCell>
                         <Button size="sm" variant="outline" onClick={() => handleSendToOptimizer(input)}>
                           <Zap className="h-4 w-4 mr-1" />
                           Optimize
                         </Button>
-                      </TableCell>
+                      </TableCell> */}
                     </TableRow>
                   ))}
                 </TableBody>
