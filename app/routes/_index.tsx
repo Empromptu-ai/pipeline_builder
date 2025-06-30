@@ -35,8 +35,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   setSessionUid(sessionUid); // Set it globally (or as globally as a trashfire like remix can manage, this is server-side)
   
   //better send it in a cookie too because apparently remix declared multiple server environments that also can't communicate
-  const cookieHeader = request.headers.get('Cookie');
-  const cookies = cookie.parse(cookieHeader || '');
+  // const cookieHeader = request.headers.get('Cookie');
+  // const cookies = cookie.parse(cookieHeader || '');
 
   return json({
     user: userSession,
@@ -48,16 +48,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
   },
   //and here's the cookie too, because remix can't comminicate betweeen any of its dozen-odd layers, or with 
   // any of its many dozens of libraries.
-  {
-    headers: {
-      'Set-Cookie': cookie.serialize('sessionUid', sessionUid, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 // 24 hours
-      })
-    }
-  }
+  // {
+  //   headers: {
+  //     'Set-Cookie': cookie.serialize('sessionUid', sessionUid, {
+  //       httpOnly: true,
+  //       secure: process.env.NODE_ENV === 'production',
+  //       sameSite: 'lax',
+  //       maxAge: 60 * 60 * 24 // 24 hours
+  //     })
+  //   }
+  // }
 
 );
 }
