@@ -90,8 +90,26 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
   console.log('The request Object messages:', messages);
 
   // get the user session and pull the session UID out of it.
-  const userSession = await getUserSession(request);
-  const description = userSession.sessionUid;
+  // (Get sessionUid from the __session cookie)
+  const cookieHeader = request.headers.get("Cookie");
+  let sessionUid = null;
+
+  if (cookieHeader) {
+    const sessionMatch = cookieHeader.match(/__session=([^;]+)/);
+    if (sessionMatch) {
+      try {
+        const sessionData = JSON.parse(atob(decodeURIComponent(sessionMatch[1])));
+        description = sessionData.userSession?.userId;
+      } catch (error) {
+        console.error('Error decoding session:', error);
+      }
+    }
+  }
+
+
+
+  // const userSession = await getUserSession(request);
+  // const description = userSession.sessionUid;
 
   console.log('Got description in api.chat.ts', description);
 

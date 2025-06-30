@@ -26,11 +26,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
   // const apiKey = await getUserSecret(userSession.userId, 'api_key');
   // const customSetting = await getUserSecret(userSession.userId, 'custom_setting');
 
-  // Generate the session UID here (for app disambiguation)
-  const sessionUid = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
+  //NOTE:  Doing this further upstream, in login.tsx
+  // Generate the session UID here (for app disambiguation)
+  // const sessionUid = Math.random().toString(36).substring(2) + Date.now().toString(36);
   // also add this to the session in case we can't get it any other way
-  userSession.sessionUid = sessionUid
+  // userSession.sessionUid = sessionUid
 
   setSessionUid(sessionUid); // Set it globally (or as globally as a trashfire like remix can manage, this is server-side)
   
