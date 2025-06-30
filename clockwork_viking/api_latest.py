@@ -1564,7 +1564,7 @@ async def generate_task_for_prompt(request: ApplyPromptRequest, project_record: 
         async with httpx.AsyncClient() as client:
             # Step 1: Create task
             task_payload = {
-                "name": request.prompt_string[:15],  # First 15 characters
+                "name": request.prompt_string[:25],  # First 15 characters
                 "description": "",
                 "projectId": project_id
             }
@@ -1657,113 +1657,204 @@ async def apply_existing_prompt(request: ApplyPromptRequest, user_token: str = D
     Apply prompts to data combinations and generate new objects
     """
     try:
+        print(f"=== Starting apply_existing_prompt function ===")
+        print(f"User token: {user_token}")
+        print(f"Number of inputs requested: {len(request.inputs)}")
+        print(f"Created object names: {request.created_object_names}")
+        print(f"Prompt string length: {len(request.prompt_string)}")
+        
         # Step 1: Get all input objects from database
+        print(f"\n--- Step 1: Getting input objects from database ---")
         input_objects = {}
         for input_spec in request.inputs:
+            print(f"Looking for object: {input_spec.input_object_name + user_token}")
             obj = await collection.find_one({"object_name": input_spec.input_object_name + user_token})
             if not obj:
+                print(f"ERROR: Object {input_spec.input_object_name + user_token} not found")
                 raise HTTPException(status_code=404, detail=f"Object {input_spec.input_object_name + user_token} not found")
+            print(f"Found object: {input_spec.input_object_name}, data entries: {len(obj['data'])}")
             input_objects[input_spec.input_object_name] = obj
+        print(f"Successfully retrieved {len(input_objects)} input objects")
         
         # Step 2: Process each input according to its mode
+        print(f"\n--- Step 2: Processing inputs according to their modes ---")
         processed_inputs = {}
         for input_spec in request.inputs:
+            print(f"Processing input: {input_spec.input_object_name}, mode: {input_spec.mode}")
             obj_data = input_objects[input_spec.input_object_name]
+            
             # Ensure this fits the formula - one string as value for each input.
+            print(f"Converting {len(obj_data['data'])} data entries to strings")
             for i in range(len(obj_data["data"])):
+                original_type = type(obj_data["data"][i]["value"])
                 obj_data["data"][i]["value"] = str(obj_data["data"][i]["value"])
+                print(f"  Entry {i}: converted {original_type} to string")
+            
             data_entries = [DataEntry(**entry) for entry in obj_data["data"]]
+            print(f"Created {len(data_entries)} DataEntry objects")
             
             if input_spec.mode == "combine_events":
+                print(f"  Mode: combine_events - combining all entries into one")
                 # Combine all entries into one
                 combined = combine_events(data_entries)
                 processed_inputs[input_spec.input_object_name] = [combined]
+                print(f"  Combined into 1 entry")
             else:
+                print(f"  Mode: {input_spec.mode} - keeping individual entries")
                 # Keep individual entries
                 processed_inputs[input_spec.input_object_name] = data_entries
+                print(f"  Kept {len(data_entries)} individual entries")
+        
+        print(f"Processed inputs summary:")
+        for name, entries in processed_inputs.items():
+            print(f"  {name}: {len(entries)} entries")
         
         # Step 3: Generate combinations based on modes
+        print(f"\n--- Step 3: Generating combinations based on modes ---")
         combinations = []
         input_names = list(processed_inputs.keys())
         input_specs_by_name = {spec.input_object_name: spec for spec in request.inputs}
         
+        print(f"Input names: {input_names}")
+        print(f"Input modes: {[(name, input_specs_by_name[name].mode) for name in input_names]}")
+        
         if len(input_names) == 1:
+            print(f"Single input case")
             # Single input case
             name = input_names[0]
-            for entry in processed_inputs[name]:
+            for i, entry in enumerate(processed_inputs[name]):
                 combinations.append({name: entry})
+                print(f"  Created combination {i+1}: {name}")
         else:
+            print(f"Multiple inputs case ({len(input_names)} inputs)")
             # Multiple inputs - check if any use match_keys mode
             has_match_keys = any(input_specs_by_name[name].mode == "match_keys" for name in input_names)
+            print(f"Has match_keys mode: {has_match_keys}")
             
             if has_match_keys:
+                print(f"Handling match_keys mode")
                 # Handle match_keys mode
                 for i, name1 in enumerate(input_names):
                     for j, name2 in enumerate(input_names[i+1:], i+1):
+                        print(f"  Checking pair: {name1} ({input_specs_by_name[name1].mode}) vs {name2} ({input_specs_by_name[name2].mode})")
                         if (input_specs_by_name[name1].mode == "match_keys" or 
                             input_specs_by_name[name2].mode == "match_keys"):
+                            print(f"    This pair has match_keys mode")
                             matches = get_matching_entries(
                                 processed_inputs[name1], 
                                 processed_inputs[name2]
                             )
-                            for entry1, entry2 in matches:
+                            print(f"    Found {len(matches)} matching pairs")
+                            for match_idx, (entry1, entry2) in enumerate(matches):
                                 combo = {name1: entry1, name2: entry2}
+                                print(f"    Match {match_idx+1}: {name1} + {name2}")
                                 # Add other inputs if they exist
                                 for other_name in input_names:
                                     if other_name not in [name1, name2]:
+                                        print(f"      Adding other input: {other_name}")
                                         # For now, just take first entry of other inputs
                                         if processed_inputs[other_name]:
                                             combo[other_name] = processed_inputs[other_name][0]
+                                            print(f"        Added first entry from {other_name}")
                                 combinations.append(combo)
+                            print(f"    Added {len(matches)} combinations from this pair")
             else:
+                print(f"No match_keys mode - generating all permutations")
                 # All permutations for combine_events and use_individually
                 input_lists = [processed_inputs[name] for name in input_names]
+                list_lengths = [len(lst) for lst in input_lists]
+                print(f"Input list lengths: {dict(zip(input_names, list_lengths))}")
+                total_combinations = 1
+                for length in list_lengths:
+                    total_combinations *= length
+                print(f"Total combinations to generate: {total_combinations}")
+                
+                combo_count = 0
                 for combo_tuple in product(*input_lists):
                     combo_dict = dict(zip(input_names, combo_tuple))
                     combinations.append(combo_dict)
+                    combo_count += 1
+                    if combo_count <= 5 or combo_count % 100 == 0:
+                        print(f"  Generated combination {combo_count}: {list(combo_dict.keys())}")
+                print(f"Generated {len(combinations)} total combinations")
+        
+        print(f"Final combinations count: {len(combinations)}")
         
         # Step 4: Apply prompts and call OpenAI
+        print(f"\n--- Step 4: Applying prompts and calling OpenAI ---")
         results_processed = 0
         
-        for combo in combinations:
+        for combo_idx, combo in enumerate(combinations):
+            print(f"\nProcessing combination {combo_idx + 1}/{len(combinations)}")
+            print(f"  Combination inputs: {list(combo.keys())}")
+            
             # Replace placeholders in prompt
             filled_prompt = request.prompt_string
             all_keys = []
             
+            print(f"  Replacing placeholders in prompt...")
             for input_name, data_entry in combo.items():
                 # NOTE:  Here we figure out when we should use the summary value instead.
                 length_of_main_value = len(str(data_entry.value))
                 value_to_use = str(data_entry.value)
+                print(f"    {input_name}: main value length = {length_of_main_value}")
+                
                 if length_of_main_value > 2000:
                     value_to_use = data_entry.summary_value
+                    print(f"    {input_name}: Using summary value (main value too long)")
+                else:
+                    print(f"    {input_name}: Using main value")
                 
                 placeholder = "{" + input_name + "}"
                 filled_prompt = filled_prompt.replace(placeholder, value_to_use)
+                print(f"    Replaced placeholder {placeholder}")
+                
                 all_keys.extend(data_entry.key_list)
+                print(f"    Added {len(data_entry.key_list)} keys from {input_name}")
+            
+            print(f"  Total keys collected: {len(all_keys)}")
+            print(f"  Filled prompt length: {len(filled_prompt)}")
             
             # Call OpenAI API
+            print(f"  Calling OpenAI API...")
             openai_result = await call_openai_api(filled_prompt, request.created_object_names) #  + user_token)
+            print(f"  OpenAI API returned: {list(openai_result.keys()) if openai_result else 'None'}")
             
             # Step 5: Store results
+            print(f"  Storing results...")
             unique_keys = list(set(all_keys))
             new_uuid = str(uuid.uuid4())
             final_keys = unique_keys + [new_uuid]
+            print(f"  Unique keys: {len(unique_keys)}, Final keys (with UUID): {len(final_keys)}")
             
             for obj_name in request.created_object_names:
+                print(f"    Processing created object: {obj_name}")
                 if obj_name in openai_result:
                     obj_name_plus = obj_name + user_token
+                    print(f"      Object name with token: {obj_name_plus}")
+                    
                     # Ensure target object exists
+                    print(f"      Ensuring target object exists...")
                     await get_or_create_object(obj_name_plus)
                     
                     # Add the result
+                    print(f"      Adding data entry...")
                     await add_data_entry(
                         object_name=obj_name_plus,
                         key_list=final_keys,
                         # value=str(openai_result[obj_name])
                         value=openai_result[obj_name]
                     )
+                    print(f"      Successfully added data entry for {obj_name}")
+                else:
+                    print(f"      WARNING: {obj_name} not found in OpenAI result")
             
             results_processed += 1
+            print(f"  Combination {combo_idx + 1} processed successfully")
+        
+        print(f"\n--- Final Results ---")
+        print(f"Total combinations processed: {results_processed}")
+        print(f"Created objects: {request.created_object_names}")
         
         # Note we aren't sending the user_token part of the created_object_names back.
         return JSONResponse(
@@ -1775,7 +1866,138 @@ async def apply_existing_prompt(request: ApplyPromptRequest, user_token: str = D
         )
         
     except Exception as e:
+        print(f"ERROR: Exception occurred: {str(e)}")
+        print(f"Exception type: {type(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+
+# async def apply_existing_prompt(request: ApplyPromptRequest, user_token: str = Depends(get_user_token), prompt_record=None):
+#     """
+#     Apply prompts to data combinations and generate new objects
+#     """
+#     try:
+#         # Step 1: Get all input objects from database
+#         input_objects = {}
+#         for input_spec in request.inputs:
+#             obj = await collection.find_one({"object_name": input_spec.input_object_name + user_token})
+#             if not obj:
+#                 raise HTTPException(status_code=404, detail=f"Object {input_spec.input_object_name + user_token} not found")
+#             input_objects[input_spec.input_object_name] = obj
+        
+#         # Step 2: Process each input according to its mode
+#         processed_inputs = {}
+#         for input_spec in request.inputs:
+#             obj_data = input_objects[input_spec.input_object_name]
+#             # Ensure this fits the formula - one string as value for each input.
+#             for i in range(len(obj_data["data"])):
+#                 obj_data["data"][i]["value"] = str(obj_data["data"][i]["value"])
+#             data_entries = [DataEntry(**entry) for entry in obj_data["data"]]
+            
+#             if input_spec.mode == "combine_events":
+#                 # Combine all entries into one
+#                 combined = combine_events(data_entries)
+#                 processed_inputs[input_spec.input_object_name] = [combined]
+#             else:
+#                 # Keep individual entries
+#                 processed_inputs[input_spec.input_object_name] = data_entries
+        
+#         # Step 3: Generate combinations based on modes
+#         combinations = []
+#         input_names = list(processed_inputs.keys())
+#         input_specs_by_name = {spec.input_object_name: spec for spec in request.inputs}
+        
+#         if len(input_names) == 1:
+#             # Single input case
+#             name = input_names[0]
+#             for entry in processed_inputs[name]:
+#                 combinations.append({name: entry})
+#         else:
+#             # Multiple inputs - check if any use match_keys mode
+#             has_match_keys = any(input_specs_by_name[name].mode == "match_keys" for name in input_names)
+            
+#             if has_match_keys:
+#                 # Handle match_keys mode
+#                 for i, name1 in enumerate(input_names):
+#                     for j, name2 in enumerate(input_names[i+1:], i+1):
+#                         if (input_specs_by_name[name1].mode == "match_keys" or 
+#                             input_specs_by_name[name2].mode == "match_keys"):
+#                             matches = get_matching_entries(
+#                                 processed_inputs[name1], 
+#                                 processed_inputs[name2]
+#                             )
+#                             for entry1, entry2 in matches:
+#                                 combo = {name1: entry1, name2: entry2}
+#                                 # Add other inputs if they exist
+#                                 for other_name in input_names:
+#                                     if other_name not in [name1, name2]:
+#                                         # For now, just take first entry of other inputs
+#                                         if processed_inputs[other_name]:
+#                                             combo[other_name] = processed_inputs[other_name][0]
+#                                 combinations.append(combo)
+#             else:
+#                 # All permutations for combine_events and use_individually
+#                 input_lists = [processed_inputs[name] for name in input_names]
+#                 for combo_tuple in product(*input_lists):
+#                     combo_dict = dict(zip(input_names, combo_tuple))
+#                     combinations.append(combo_dict)
+        
+#         # Step 4: Apply prompts and call OpenAI
+#         results_processed = 0
+        
+#         for combo in combinations:
+#             # Replace placeholders in prompt
+#             filled_prompt = request.prompt_string
+#             all_keys = []
+            
+#             for input_name, data_entry in combo.items():
+#                 # NOTE:  Here we figure out when we should use the summary value instead.
+#                 length_of_main_value = len(str(data_entry.value))
+#                 value_to_use = str(data_entry.value)
+#                 if length_of_main_value > 2000:
+#                     value_to_use = data_entry.summary_value
+                
+#                 placeholder = "{" + input_name + "}"
+#                 filled_prompt = filled_prompt.replace(placeholder, value_to_use)
+#                 all_keys.extend(data_entry.key_list)
+            
+#             # Call OpenAI API
+#             openai_result = await call_openai_api(filled_prompt, request.created_object_names) #  + user_token)
+            
+#             # Step 5: Store results
+#             unique_keys = list(set(all_keys))
+#             new_uuid = str(uuid.uuid4())
+#             final_keys = unique_keys + [new_uuid]
+            
+#             for obj_name in request.created_object_names:
+#                 if obj_name in openai_result:
+#                     obj_name_plus = obj_name + user_token
+#                     # Ensure target object exists
+#                     await get_or_create_object(obj_name_plus)
+                    
+#                     # Add the result
+#                     await add_data_entry(
+#                         object_name=obj_name_plus,
+#                         key_list=final_keys,
+#                         # value=str(openai_result[obj_name])
+#                         value=openai_result[obj_name]
+#                     )
+            
+#             results_processed += 1
+        
+#         # Note we aren't sending the user_token part of the created_object_names back.
+#         return JSONResponse(
+#             content={
+#                 "message": f"Successfully processed {results_processed} combinations",
+#                 "created_objects": request.created_object_names,
+#                 "combinations_processed": len(combinations)
+#             }
+#         )
+        
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
 
