@@ -344,6 +344,11 @@ const ManualPromptOptimization: React.FC<ManualPromptOptimizationProps> = ({
         position: 'bottom-right',
         autoClose: 3000,
       });
+
+      // Refresh the prompts list after successful promotion
+      if (onRefreshPrompts) {
+        onRefreshPrompts();
+      }
     } catch (error) {
       console.error('Error promoting experiment:', error);
       toast.error('Unable to promote this experiment', {

@@ -120,7 +120,10 @@ const CreatePromptDialog: React.FC<CreatePromptDialogProps> = ({ onCreate, model
                 step="0.1"
                 value={temperature}
                 onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                className="w-full mt-1"
+                className="w-full mt-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-purple"
+                style={{
+                  background: `linear-gradient(to right, #9333ea 0%, #9333ea ${temperature * 100}%, #e5e7eb ${temperature * 100}%, #e5e7eb 100%)`,
+                }}
               />
             </div>
           </div>
