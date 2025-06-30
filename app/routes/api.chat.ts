@@ -9,6 +9,7 @@ import { getAPIKey } from '~/lib/.server/llm/api-key';
 import { getAnthropicModel } from '~/lib/.server/llm/model';
 import { getUserSession } from '~/utils/session.server';
 // import { generateSessionId } from '~/utils/sessionId';
+import { createCookieSessionStorage } from "@remix-run/node";
 
 const estimateTokens = (text: string): number => {
   // Rough estimation: ~4 characters per token for English text
@@ -91,21 +92,25 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
   // get the user session and pull the session UID out of it.
   // (Get sessionUid from the __session cookie)
-  const cookieHeader = request.headers.get("Cookie");
-  let sessionUid = null;
-  
+  // const cookieHeader = request.headers.get("Cookie");
+  // let sessionUid = null;
   let description;   
-  if (cookieHeader) {
-    const sessionMatch = cookieHeader.match(/__session=([^;]+)/);
-    if (sessionMatch) {
-      try {
-        const sessionData = JSON.parse(atob(decodeURIComponent(sessionMatch[1])));
-        const description = sessionData.userSession?.userId;
-      } catch (error) {
-        console.error('Error decoding session:', error);
-      }
-    }
-  }
+
+  const session_for_cookie = await getSession(request.headers.get("Cookie"));
+  const description = session_for_cookie.get("sessionUid"); 
+
+
+  // if (cookieHeader) {
+  //   //const sessionMatch = cookieHeader.match(/__session=([^;]+)/);
+  //   if (sessionMatch) {
+  //     try {
+  //       const sessionData = JSON.parse(atob(decodeURIComponent(sessionMatch[1])));
+  //       const description = sessionData.userSession?.userId;
+  //     } catch (error) {
+  //       console.error('Error decoding session:', error);
+  //     }
+  //   }
+  // }
 
 
 
