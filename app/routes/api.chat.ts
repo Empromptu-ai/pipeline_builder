@@ -93,7 +93,8 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
   // (Get sessionUid from the __session cookie)
   const cookieHeader = request.headers.get("Cookie");
   let sessionUid = null;
-
+  
+  let description;   
   if (cookieHeader) {
     const sessionMatch = cookieHeader.match(/__session=([^;]+)/);
     if (sessionMatch) {
