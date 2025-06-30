@@ -1,5 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronDown, ChevronUp, Check, Circle, Loader, X } from 'lucide-react';
 import { computed } from 'nanostores';
 import { memo, useEffect, useRef, useState } from 'react';
 import { createHighlighter, type BundledLanguage, type BundledTheme, type HighlighterGeneric } from 'shiki';
@@ -74,9 +75,7 @@ export const Artifact = memo(({ messageId }: ArtifactProps) => {
               className="bg-bolt-elements-artifacts-background hover:bg-bolt-elements-artifacts-backgroundHover"
               onClick={toggleActions}
             >
-              <div className="p-4">
-                <div className={showActions ? 'i-ph:caret-up-bold' : 'i-ph:caret-down-bold'}></div>
-              </div>
+              <div className="p-4">{showActions ? <ChevronUp /> : <ChevronDown />}</div>
             </motion.button>
           )}
         </AnimatePresence>
@@ -151,13 +150,13 @@ const ActionList = memo(({ actions }: ActionListProps) => {
               <div className="flex items-center gap-1.5 text-sm">
                 <div className={classNames('text-lg', getIconColor(action.status))}>
                   {status === 'running' ? (
-                    <div className="i-svg-spinners:90-ring-with-bg"></div>
+                    <Loader className="animate-spin" />
                   ) : status === 'pending' ? (
-                    <div className="i-ph:circle-duotone"></div>
+                    <Circle />
                   ) : status === 'complete' ? (
-                    <div className="i-ph:check"></div>
+                    <Check />
                   ) : status === 'failed' || status === 'aborted' ? (
-                    <div className="i-ph:x"></div>
+                    <X />
                   ) : null}
                 </div>
                 {type === 'file' ? (

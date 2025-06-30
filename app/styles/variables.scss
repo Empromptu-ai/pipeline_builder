@@ -21,11 +21,11 @@
   --bolt-elements-button-primary-text: theme('colors.accent.500');
 
   --bolt-elements-button-secondary-background: theme('colors.alpha.gray.5');
-  --bolt-elements-button-secondary-backgroundHover: theme('colors.alpha.gray.10');
-  --bolt-elements-button-secondary-text: theme('colors.gray.950');
+  --bolt-elements-button-secondary-backgroundHover: #1717171a;
+  --bolt-elements-button-secondary-text: #0a0a0a;
 
-  --bolt-elements-button-danger-background: theme('colors.alpha.red.10');
-  --bolt-elements-button-danger-backgroundHover: theme('colors.alpha.red.20');
+  --bolt-elements-button-danger-background: #ef44441a;
+  --bolt-elements-button-danger-backgroundHover: #ef444433;
   --bolt-elements-button-danger-text: theme('colors.red.500');
 
   --bolt-elements-item-contentDefault: theme('colors.alpha.gray.50');
@@ -105,7 +105,6 @@
 }
 
 /* Color Tokens Dark Theme */
-:root,
 :root[data-theme='dark'] {
   --bolt-elements-borderColor: theme('colors.alpha.white.10');
   --bolt-elements-borderColorActive: theme('colors.accent.500');
@@ -208,6 +207,52 @@
   --bolt-terminal-brightMagenta: #ff6ac1;
   --bolt-terminal-brightCyan: #9aedfe;
   --bolt-terminal-brightWhite: #f1f1f0;
+}
+
+/* UI Component Tokens */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
+}
+
+:root[data-theme='dark'] {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
 }
 
 /*

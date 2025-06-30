@@ -1,46 +1,25 @@
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { classNames } from '~/utils/classNames';
 
 type IconSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
-interface BaseIconButtonProps {
+interface IconButtonProps {
   size?: IconSize;
   className?: string;
-  iconClassName?: string;
   disabledClassName?: string;
   title?: string;
   disabled?: boolean;
   onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+  children: ReactNode;
 }
 
-type IconButtonWithoutChildrenProps = {
-  icon: string;
-  children?: undefined;
-} & BaseIconButtonProps;
-
-type IconButtonWithChildrenProps = {
-  icon?: undefined;
-  children: string | JSX.Element | JSX.Element[];
-} & BaseIconButtonProps;
-
-type IconButtonProps = IconButtonWithoutChildrenProps | IconButtonWithChildrenProps;
-
 export const IconButton = memo(
-  ({
-    icon,
-    size = 'xl',
-    className,
-    iconClassName,
-    disabledClassName,
-    disabled = false,
-    title,
-    onClick,
-    children,
-  }: IconButtonProps) => {
+  ({ size = 'xl', className, disabledClassName, disabled = false, title, onClick, children }: IconButtonProps) => {
     return (
       <button
         className={classNames(
           'flex items-center text-bolt-elements-item-contentDefault bg-transparent enabled:hover:text-bolt-elements-item-contentActive rounded-md p-1 enabled:hover:bg-bolt-elements-item-backgroundActive disabled:cursor-not-allowed',
+          getIconSize(size),
           {
             [classNames('opacity-30', disabledClassName)]: disabled,
           },
@@ -56,7 +35,7 @@ export const IconButton = memo(
           onClick?.(event);
         }}
       >
-        {children ? children : <div className={classNames(icon, getIconSize(size), iconClassName)}></div>}
+        {children}
       </button>
     );
   },
@@ -66,7 +45,7 @@ function getIconSize(size: IconSize) {
   if (size === 'sm') {
     return 'text-sm';
   } else if (size === 'md') {
-    return 'text-md';
+    return 'text-base';
   } else if (size === 'lg') {
     return 'text-lg';
   } else if (size === 'xl') {

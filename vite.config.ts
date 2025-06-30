@@ -10,13 +10,18 @@ export default defineConfig((config) => {
     build: {
       target: 'esnext',
     },
+    resolve: {
+      alias: {
+        path: 'path-browserify',
+      },
+    },
     server: {
       port: 8080, // change here
-      allowedHosts: ['staging.impromptu-labs.com','localhost','builder.impromptu-labs.com']
+      allowedHosts: ['staging.impromptu-labs.com', 'localhost', 'builder.impromptu-labs.com'],
     },
     plugins: [
       nodePolyfills({
-        include: ['path', 'buffer'],
+        include: ['buffer'],
       }),
       config.mode !== 'test' && remixCloudflareDevProxy(),
       remixVitePlugin({

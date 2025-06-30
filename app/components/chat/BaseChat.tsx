@@ -1,7 +1,7 @@
 import type { Message } from 'ai';
+import { ArrowDownLeft, Loader, Sparkles } from 'lucide-react';
 import React, { type RefCallback } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
-import { Menu } from '~/components/sidebar/Menu.client';
 import { IconButton } from '~/components/ui/IconButton';
 import { Workbench } from '~/components/workbench/Workbench.client';
 import { classNames } from '~/utils/classNames';
@@ -68,13 +68,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         )}
         data-chat-visible={showChat}
       >
-        <ClientOnly>{() => <Menu />}</ClientOnly>
         <div ref={scrollRef} className="flex overflow-y-auto w-full h-full">
           <div className={classNames(styles.Chat, 'flex flex-col flex-grow min-w-[var(--chat-min-width)] h-full')}>
             {!chatStarted && (
               <div id="intro" className="mt-[26vh] max-w-chat mx-auto">
                 <h1 className="text-5xl text-center font-bold text-bolt-elements-textPrimary mb-2">
-                  Build an AI Application Agenticly
+                  Build an AI App Agentically
                 </h1>
                 <p className="mb-4 text-center text-bolt-elements-textSecondary">
                   Build full enterprise-grade AI applications, not just static websites, with your personal AI engineer.
@@ -163,12 +162,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                       >
                         {enhancingPrompt ? (
                           <>
-                            <div className="i-svg-spinners:90-ring-with-bg text-bolt-elements-loader-progress text-xl"></div>
+                            <Loader className="animate-spin text-bolt-elements-loader-progress text-xl" />
                             <div className="ml-1.5">Enhancing prompt...</div>
                           </>
                         ) : (
                           <>
-                            <div className="i-bolt:stars text-xl"></div>
+                            <Sparkles className="text-xl" />
                             {promptEnhanced && <div className="ml-1.5">Prompt enhanced</div>}
                           </>
                         )}
@@ -197,7 +196,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         className="group flex items-center w-full gap-2 justify-center bg-transparent text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary transition-theme"
                       >
                         {examplePrompt.text}
-                        <div className="i-ph:arrow-bend-down-left" />
+                        <ArrowDownLeft />
                       </button>
                     );
                   })}

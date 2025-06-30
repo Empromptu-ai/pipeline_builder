@@ -1,133 +1,95 @@
-import * as RadixDialog from '@radix-ui/react-dialog';
-import { motion, type Variants } from 'framer-motion';
-import React, { memo, type ReactNode } from 'react';
-import { classNames } from '~/utils/classNames';
-import { cubicEasingFn } from '~/utils/easings';
-import { IconButton } from './IconButton';
+import * as React from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { X } from 'lucide-react';
 
-export { Close as DialogClose, Root as DialogRoot } from '@radix-ui/react-dialog';
+import { cn } from '~/lib/utils';
 
-const transition = {
-  duration: 0.15,
-  ease: cubicEasingFn,
-};
+const Dialog = DialogPrimitive.Root;
 
-export const dialogBackdropVariants = {
-  closed: {
-    opacity: 0,
-    transition,
-  },
-  open: {
-    opacity: 1,
-    transition,
-  },
-} satisfies Variants;
+const DialogTrigger = DialogPrimitive.Trigger;
 
-export const dialogVariants = {
-  closed: {
-    x: '-50%',
-    y: '-40%',
-    scale: 0.96,
-    opacity: 0,
-    transition,
-  },
-  open: {
-    x: '-50%',
-    y: '-50%',
-    scale: 1,
-    opacity: 1,
-    transition,
-  },
-} satisfies Variants;
+const DialogPortal = DialogPrimitive.Portal;
 
-interface DialogButtonProps {
-  type: 'primary' | 'secondary' | 'danger';
-  children: ReactNode;
-  onClick?: (event: React.UIEvent) => void;
-}
+const DialogClose = DialogPrimitive.Close;
 
-export const DialogButton = memo(({ type, children, onClick }: DialogButtonProps) => {
-  return (
-    <button
-      className={classNames(
-        'inline-flex h-[35px] items-center justify-center rounded-lg px-4 text-sm leading-none focus:outline-none',
-        {
-          'bg-bolt-elements-button-primary-background text-bolt-elements-button-primary-text hover:bg-bolt-elements-button-primary-backgroundHover':
-            type === 'primary',
-          'bg-bolt-elements-button-secondary-background text-bolt-elements-button-secondary-text hover:bg-bolt-elements-button-secondary-backgroundHover':
-            type === 'secondary',
-          'bg-bolt-elements-button-danger-background text-bolt-elements-button-danger-text hover:bg-bolt-elements-button-danger-backgroundHover':
-            type === 'danger',
-        },
-      )}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
-});
+const DialogOverlay = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn(
+      'fixed inset-0 z-[10000] bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+      className,
+    )}
+    {...props}
+  />
+));
+DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
-export const DialogTitle = memo(({ className, children, ...props }: RadixDialog.DialogTitleProps) => {
-  return (
-    <RadixDialog.Title
-      className={classNames(
-        'px-5 py-4 flex items-center justify-between border-b border-bolt-elements-borderColor text-lg font-semibold leading-6 text-bolt-elements-textPrimary',
+const DialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPortal container={typeof document !== 'undefined' ? document.body : undefined}>
+    <DialogOverlay />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        'fixed left-[50%] top-[50%] z-[10000] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-700 p-6 shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg',
         className,
       )}
       {...props}
     >
       {children}
-    </RadixDialog.Title>
-  );
-});
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <X className="h-4 w-4" />
+        <span className="sr-only">Close</span>
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  </DialogPortal>
+));
+DialogContent.displayName = DialogPrimitive.Content.displayName;
 
-export const DialogDescription = memo(({ className, children, ...props }: RadixDialog.DialogDescriptionProps) => {
-  return (
-    <RadixDialog.Description
-      className={classNames('px-5 py-4 text-bolt-elements-textPrimary text-md', className)}
-      {...props}
-    >
-      {children}
-    </RadixDialog.Description>
-  );
-});
+const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />
+);
+DialogHeader.displayName = 'DialogHeader';
 
-interface DialogProps {
-  children: ReactNode | ReactNode[];
-  className?: string;
-  onBackdrop?: (event: React.UIEvent) => void;
-  onClose?: (event: React.UIEvent) => void;
-}
+const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)} {...props} />
+);
+DialogFooter.displayName = 'DialogFooter';
 
-export const Dialog = memo(({ className, children, onBackdrop, onClose }: DialogProps) => {
-  return (
-    <RadixDialog.Portal>
-      <RadixDialog.Overlay onClick={onBackdrop} asChild>
-        <motion.div
-          className="bg-black/50 fixed inset-0 z-max"
-          initial="closed"
-          animate="open"
-          exit="closed"
-          variants={dialogBackdropVariants}
-        />
-      </RadixDialog.Overlay>
-      <RadixDialog.Content asChild>
-        <motion.div
-          className={classNames(
-            'fixed top-[50%] left-[50%] z-max max-h-[85vh] w-[90vw] max-w-[450px] translate-x-[-50%] translate-y-[-50%] border border-bolt-elements-borderColor rounded-lg bg-bolt-elements-background-depth-2 shadow-lg focus:outline-none overflow-hidden',
-            className,
-          )}
-          initial="closed"
-          animate="open"
-          exit="closed"
-          variants={dialogVariants}
-        >
-          {children}
-          <RadixDialog.Close asChild onClick={onClose}>
-            <IconButton icon="i-ph:x" className="absolute top-[10px] right-[10px]" />
-          </RadixDialog.Close>
-        </motion.div>
-      </RadixDialog.Content>
-    </RadixDialog.Portal>
-  );
-});
+const DialogTitle = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn('text-lg font-semibold leading-none tracking-tight', className)}
+    {...props}
+  />
+));
+DialogTitle.displayName = DialogPrimitive.Title.displayName;
+
+const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
+));
+DialogDescription.displayName = DialogPrimitive.Description.displayName;
+
+export {
+  Dialog,
+  DialogPortal,
+  DialogOverlay,
+  DialogClose,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+};

@@ -57,35 +57,43 @@ function shouldExcludeFromGitHub(filePath: string): boolean {
     '.nyc_output',
     '.cache',
     '.temp',
-    '.tmp'
+    '.tmp',
   ];
-  
-  return excludePatterns.some(pattern => {
+
+  return excludePatterns.some((pattern) => {
     if (pattern.includes('*')) {
       const regex = new RegExp(pattern.replace('*', '.*'));
       return regex.test(filePath);
     }
+
     return filePath.includes(pattern);
   });
 }
 
 // Function to extract all files from WebContainer (your existing logic)
-export async function extractFiles(container: WebContainer, forGitHub: boolean = false): Promise<Map<string, string | Uint8Array>> {
+export async function extractFiles(
+  container: WebContainer,
+  forGitHub: boolean = false,
+): Promise<Map<string, string | Uint8Array>> {
   try {
     console.log('Starting file extraction...');
-    
+
     // Recursively collect all file paths
     const allFilePaths = [];
+
     async function collectFiles(dirPath) {
       const entries = await container.fs.readdir(dirPath, { withFileTypes: true });
+
       for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
+
         if (entry.isFile()) {
           // Filter out large/unnecessary files for GitHub deployment
           if (forGitHub && shouldExcludeFromGitHub(fullPath)) {
             console.log(`Skipping file for GitHub: ${fullPath}`);
             continue;
           }
+
           allFilePaths.push(fullPath);
         } else if (entry.isDirectory()) {
           // Skip excluded directories entirely for GitHub
@@ -93,44 +101,50 @@ export async function extractFiles(container: WebContainer, forGitHub: boolean =
             console.log(`Skipping directory for GitHub: ${fullPath}`);
             continue;
           }
+
           await collectFiles(fullPath);
         }
       }
     }
     await collectFiles(process.cwd());
-    
+
     console.log(`Found ${allFilePaths.length} files to process`);
-    
+
     // Create a map to store file contents
     const fileContents = new Map<string, string | Uint8Array>();
 
     // Read all files
-    for (const file_path of allFilePaths) {    
+    for (const file_path of allFilePaths) {
       console.log(`Processing File Path: ${file_path}`);
-      if (!file_path) continue;
+
+      if (!file_path) {
+        continue;
+      }
 
       try {
         const content = await container.fs.readFile(file_path, 'utf8');
-        
+
         // Check file size for GitHub (GitHub has a 100MB limit per file, but let's be conservative)
-        if (forGitHub && typeof content === 'string' && content.length > 1000000) { // 1MB limit for text files
+        if (forGitHub && typeof content === 'string' && content.length > 1000000) {
+          // 1MB limit for text files
           console.warn(`Skipping large file for GitHub: ${file_path} (${content.length} chars)`);
           continue;
         }
-        
+
         fileContents.set(file_path, content);
         console.log(`Read text file: ${file_path} (${content.length} chars)`);
       } catch (error) {
         // Try reading as binary if UTF8 fails
         try {
           const content = await container.fs.readFile(file_path);
-          
+
           // Check binary file size for GitHub
-          if (forGitHub && content.length > 1000000) { // 1MB limit for binary files
+          if (forGitHub && content.length > 1000000) {
+            // 1MB limit for binary files
             console.warn(`Skipping large binary file for GitHub: ${file_path} (${content.length} bytes)`);
             continue;
           }
-          
+
           fileContents.set(file_path, content);
           console.log(`Read binary file: ${file_path} (${content.length} bytes)`);
         } catch (binaryError) {
@@ -138,10 +152,10 @@ export async function extractFiles(container: WebContainer, forGitHub: boolean =
         }
       }
     }
-    
+
     console.log(`Successfully extracted ${fileContents.size} files`);
+
     return fileContents;
-    
   } catch (error) {
     console.error('Failed to extract files:', error);
     throw error;
@@ -151,19 +165,19 @@ export async function extractFiles(container: WebContainer, forGitHub: boolean =
 // Function to extract all files from WebContainer and download as ZIP (your existing function)
 export async function extractAndDownloadFiles(container: WebContainer) {
   const fileContents = await extractFiles(container, false);
-  
+
   const zip = new JSZip();
-  
+
   fileContents.forEach((content, path) => {
     // Remove work directory prefix and leading slash for ZIP structure
     const cleanPath = path.replace(`/${WORK_DIR_NAME}/`, '').replace(/^\//, '');
     zip.file(cleanPath, content);
   });
-  
+
   // Generate ZIP and download
   const zipBlob = await zip.generateAsync({ type: 'blob' });
   downloadBlob(zipBlob, 'bolt-project.zip');
-  
+
   return fileContents;
 }
 
@@ -171,24 +185,25 @@ export async function extractAndDownloadFiles(container: WebContainer) {
 export async function deployToGitHub(container: WebContainer, config?: Partial<GitHubConfig>) {
   try {
     console.log('Starting GitHub deployment...');
-    
+
     // Get configuration from environment variables or user input
     const finalConfig = await getGitHubConfig(config);
+
     if (!finalConfig) {
       throw new Error('GitHub deployment cancelled');
     }
-    
+
     // Extract files using existing logic, but filter for GitHub
     const fileContents = await extractFiles(container, true);
-    
+
     console.log(`Deploying ${fileContents.size} files to GitHub...`);
-    
+
     // Create repository
     const createRepoResponse = await fetch('https://api.github.com/user/repos', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${finalConfig.token}`,
-        'Accept': 'application/vnd.github.v3+json',
+        Authorization: `Bearer ${finalConfig.token}`,
+        Accept: 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -208,15 +223,18 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
     console.log(`Repository created: ${repo.html_url}`);
 
     // Wait a moment for repo to be fully initialized
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // Get the main branch SHA (needed for creating commits)
-    const branchResponse = await fetch(`https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/refs/heads/main`, {
-      headers: {
-        'Authorization': `Bearer ${finalConfig.token}`,
-        'Accept': 'application/vnd.github.v3+json',
+    const branchResponse = await fetch(
+      `https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/refs/heads/main`,
+      {
+        headers: {
+          Authorization: `Bearer ${finalConfig.token}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
       },
-    });
+    );
 
     if (!branchResponse.ok) {
       throw new Error(`Failed to get branch info: ${branchResponse.statusText}`);
@@ -228,17 +246,17 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
     // Create tree with all files
     const tree = [];
     let processedFiles = 0;
-    
+
     for (const [filePath, content] of fileContents) {
       const cleanPath = filePath.replace(`/${WORK_DIR_NAME}/`, '').replace(/^\//, '');
-      
+
       if (!cleanPath || cleanPath === '') {
         console.warn(`Skipping file with empty path: ${filePath}`);
         continue;
       }
 
       console.log(`Processing file for GitHub: ${cleanPath}`);
-      
+
       try {
         // // Convert content to base64 for GitHub API
         // let base64Content: string;
@@ -251,13 +269,11 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
         // }
 
         // Convert content to base64 for GitHub API
-        // const base64Content = typeof content === 'string' 
-        // ? btoa(content) 
+        // const base64Content = typeof content === 'string'
+        // ? btoa(content)
         // : btoa(String.fromCharCode(...new Uint8Array(content)));
         // already base64, apparently
         const base64Content = content;
-
-
 
         tree.push({
           path: cleanPath,
@@ -266,15 +282,14 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
           content: base64Content,
           encoding: 'base64',
         });
-        
+
         processedFiles++;
-        
+
         // GitHub API has limits, so let's batch if we have too many files
         if (tree.length > 100) {
           console.warn('Too many files for single commit, truncating to first 100 files');
           break;
         }
-        
       } catch (error) {
         console.warn(`Failed to process file ${cleanPath}:`, error);
       }
@@ -287,18 +302,21 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
     }
 
     // Create tree
-    const treeResponse = await fetch(`https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/trees`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${finalConfig.token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
+    const treeResponse = await fetch(
+      `https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/trees`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${finalConfig.token}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tree,
+          base_tree: baseSha,
+        }),
       },
-      body: JSON.stringify({
-        tree,
-        base_tree: baseSha,
-      }),
-    });
+    );
 
     if (!treeResponse.ok) {
       const error = await treeResponse.json();
@@ -308,19 +326,22 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
     const treeData = await treeResponse.json();
 
     // Create commit
-    const commitResponse = await fetch(`https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/commits`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${finalConfig.token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
+    const commitResponse = await fetch(
+      `https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/commits`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${finalConfig.token}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: `Deploy project from WebContainer (${processedFiles} files)`,
+          tree: treeData.sha,
+          parents: [baseSha],
+        }),
       },
-      body: JSON.stringify({
-        message: `Deploy project from WebContainer (${processedFiles} files)`,
-        tree: treeData.sha,
-        parents: [baseSha],
-      }),
-    });
+    );
 
     if (!commitResponse.ok) {
       const error = await commitResponse.json();
@@ -330,17 +351,20 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
     const commitData = await commitResponse.json();
 
     // Update main branch to point to new commit
-    const updateRefResponse = await fetch(`https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/refs/heads/main`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${finalConfig.token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
+    const updateRefResponse = await fetch(
+      `https://api.github.com/repos/${finalConfig.username}/${finalConfig.repoName}/git/refs/heads/main`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${finalConfig.token}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sha: commitData.sha,
+        }),
       },
-      body: JSON.stringify({
-        sha: commitData.sha,
-      }),
-    });
+    );
 
     if (!updateRefResponse.ok) {
       const error = await updateRefResponse.json();
@@ -348,8 +372,8 @@ export async function deployToGitHub(container: WebContainer, config?: Partial<G
     }
 
     console.log(`Successfully deployed ${processedFiles} files to GitHub: ${repo.html_url}`);
-    return repo;
 
+    return repo;
   } catch (error) {
     console.error('Failed to deploy to GitHub:', error);
     throw error;
@@ -371,12 +395,11 @@ async function getGitHubConfig(providedConfig?: Partial<GitHubConfig>): Promise<
   console.log('All env vars:', {
     token: envToken ? '***hidden***' : 'not found',
     username: envUsername || 'not found',
-    repoName: envRepoName || 'not found'
+    repoName: envRepoName || 'not found',
   });
 
   // If all required values are provided via environment or config, use them
-  if ((envToken || providedConfig?.token) && 
-      (envUsername || providedConfig?.username)) {
+  if ((envToken || providedConfig?.token) && (envUsername || providedConfig?.username)) {
     console.log('Using environment variables for GitHub config');
     return {
       token: providedConfig?.token || envToken!,
@@ -386,6 +409,7 @@ async function getGitHubConfig(providedConfig?: Partial<GitHubConfig>): Promise<
   }
 
   console.log('Missing required environment variables, showing modal');
+
   // Otherwise, show the modal for missing values
   return showGitHubConfigModal({
     token: envToken,
@@ -457,11 +481,12 @@ function showGitHubConfigModal(prefilledValues?: Partial<GitHubConfig>): Promise
       tokenInput.value = '••••••••••••••••'; // Show masked token
       tokenInput.style.color = '#999';
     }
+
     if (prefilledValues?.username) {
       usernameInput.value = prefilledValues.username;
       usernameInput.style.color = '#999';
     }
-    
+
     // Pre-fill repo name with provided value or timestamp
     repoInput.value = prefilledValues?.repoName || `webcontainer-project-${Date.now()}`;
 
@@ -495,81 +520,6 @@ function showGitHubConfigModal(prefilledValues?: Partial<GitHubConfig>): Promise
   });
 }
 
-// Function to create and add GitHub deploy button to the page
-export function createGitHubDeployButton() {
-  if (typeof document === 'undefined') return;
-  
-  // Remove existing button if it exists
-  const existingButton = document.getElementById('github-deploy-btn');
-  if (existingButton) {
-    existingButton.remove();
-  }
-  
-  const button = document.createElement('button');
-  button.id = 'github-deploy-btn';
-  button.textContent = '🚀 Deploy to GitHub';
-  button.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 180px;
-    z-index: 9999;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, #24292e 0%, #586069 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-  `;
-  
-  button.onmouseover = () => {
-    button.style.transform = 'translateY(-2px)';
-    button.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
-  };
-  
-  button.onmouseout = () => {
-    button.style.transform = 'translateY(0)';
-    button.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
-  };
-  
-  button.onclick = async () => {
-    try {
-      button.textContent = '⏳ Deploying...';
-      button.disabled = true;
-      
-      const container = await webcontainer;
-      // Let deployToGitHub handle the config (environment variables or modal)
-      const repo = await deployToGitHub(container);
-      
-      button.textContent = '✅ Deployed!';
-      
-      // Show success message with link
-      setTimeout(() => {
-        if (confirm(`Successfully deployed to GitHub!\n\nOpen repository: ${repo.html_url}?`)) {
-          window.open(repo.html_url, '_blank');
-        }
-        button.textContent = '🚀 Deploy to GitHub';
-        button.disabled = false;
-      }, 2000);
-      
-    } catch (error) {
-      console.error('GitHub deploy failed:', error);
-      button.textContent = '❌ Failed';
-      alert(`Deployment failed: ${error.message}`);
-      setTimeout(() => {
-        button.textContent = '🚀 Deploy to GitHub';
-        button.disabled = false;
-      }, 2000);
-    }
-  };
-  
-  document.body.appendChild(button);
-  return button;
-}
-
 // Type definition (add this if not already present)
 interface GitHubConfig {
   token: string;
@@ -577,73 +527,6 @@ interface GitHubConfig {
   repoName: string;
 }
 
-// Function to create and add deploy button to the page (your existing function)
-export function createDeployButton() {
-  if (typeof document === 'undefined') return;
-  
-  // Remove existing button if it exists
-  const existingButton = document.getElementById('webcontainer-deploy-btn');
-  if (existingButton) {
-    existingButton.remove();
-  }
-  
-  const button = document.createElement('button');
-  button.id = 'webcontainer-deploy-btn';
-  button.textContent = '📦 Download Project';
-  button.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-  `;
-  
-  button.onmouseover = () => {
-    button.style.transform = 'translateY(-2px)';
-    button.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
-  };
-  
-  button.onmouseout = () => {
-    button.style.transform = 'translateY(0)';
-    button.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
-  };
-  
-  button.onclick = async () => {
-    try {
-      button.textContent = '⏳ Extracting...';
-      button.disabled = true;
-      
-      const container = await webcontainer;
-      await extractAndDownloadFiles(container);
-      
-      button.textContent = '✅ Downloaded!';
-      setTimeout(() => {
-        button.textContent = '📦 Download Project';
-        button.disabled = false;
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Deploy failed:', error);
-      button.textContent = '❌ Failed';
-      setTimeout(() => {
-        button.textContent = '📦 Download Project';
-        button.disabled = false;
-      }, 2000);
-    }
-  };
-  
-  document.body.appendChild(button);
-  return button;
-}
 ////////////////////////////////////////////////////
 
 // // Add this code to your existing file - it works alongside your current functions
@@ -658,13 +541,13 @@ export function createDeployButton() {
 // export async function deployToNetlify(container: WebContainer, config?: Partial<NetlifyConfig & GitHubConfig>) {
 //   try {
 //     console.log('Starting GitHub + Netlify deployment...');
-    
+
 //     // Get configuration from environment variables or user input
 //     const finalConfig = await getNetlifyConfig(config);
 //     if (!finalConfig) {
 //       throw new Error('Netlify deployment cancelled');
 //     }
-    
+
 //     // First, deploy to GitHub (reusing your existing function)
 //     console.log('Step 1: Deploying to GitHub...');
 //     const githubConfig = {
@@ -672,16 +555,16 @@ export function createDeployButton() {
 //       username: finalConfig.githubUsername,
 //       repoName: finalConfig.siteName // Use site name as repo name for consistency
 //     };
-    
+
 //     const repo = await deployToGitHub(container, githubConfig);
 //     console.log('GitHub deployment successful:', repo.html_url);
-    
+
 //     // Wait a moment for GitHub to be ready
 //     await new Promise(resolve => setTimeout(resolve, 3000));
-    
+
 //     // Step 2: Create Netlify site connected to GitHub repo
 //     console.log('Step 2: Creating Netlify site...');
-    
+
 //     const netlifyCreateResponse = await fetch('https://api.netlify.com/api/v1/sites', {
 //       method: 'POST',
 //       headers: {
@@ -718,7 +601,7 @@ export function createDeployButton() {
 
 //     // Step 3: Trigger initial deploy from GitHub
 //     console.log('Step 3: Triggering initial deployment from GitHub...');
-    
+
 //     // First, let's set up the build hook properly
 //     const buildHookResponse = await fetch(`https://api.netlify.com/api/v1/sites/${netlifyData.id}/build_hooks`, {
 //       method: 'POST',
@@ -735,7 +618,7 @@ export function createDeployButton() {
 //     if (buildHookResponse.ok) {
 //       const buildHook = await buildHookResponse.json();
 //       console.log('Build hook created:', buildHook.url);
-      
+
 //       // Trigger the build using the build hook
 //       const triggerResponse = await fetch(buildHook.url, {
 //         method: 'POST',
@@ -753,7 +636,7 @@ export function createDeployButton() {
 //     } else {
 //       // Fallback: try to trigger deploy directly from the repo
 //       console.log('Fallback: Triggering deploy from repository...');
-      
+
 //       const deployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${netlifyData.id}/deploys`, {
 //         method: 'POST',
 //         headers: {
@@ -802,8 +685,8 @@ export function createDeployButton() {
 //   console.log('GitHub username exists:', !!envGithubUsername);
 
 //   // If all required values are available, use them
-//   if ((envNetlifyToken || providedConfig?.token) && 
-//       (envGithubToken || providedConfig?.githubToken) && 
+//   if ((envNetlifyToken || providedConfig?.token) &&
+//       (envGithubToken || providedConfig?.githubToken) &&
 //       (envGithubUsername || providedConfig?.githubUsername)) {
 //     console.log('Using environment variables for Netlify config');
 //     return {
@@ -864,31 +747,31 @@ export function createDeployButton() {
 //     modalContent.innerHTML = `
 //       <h3 style="margin: 0 0 16px 0; color: #333;">Deploy to GitHub + Netlify</h3>
 //       <p style="margin-bottom: 16px; color: #666; font-size: 14px;">This will create a GitHub repository and deploy it to Netlify.</p>
-      
+
 //       <div style="margin-bottom: 12px;">
 //         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">GitHub Token:</label>
 //         <input type="password" id="netlify-github-token" placeholder="ghp_..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" ${prefilledValues?.githubToken ? 'disabled' : ''}>
 //         <small style="color: #666;">${prefilledValues?.githubToken ? 'Token loaded from environment' : 'Create at: GitHub Settings → Developer settings → Personal access tokens'}</small>
 //       </div>
-      
+
 //       <div style="margin-bottom: 12px;">
 //         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">GitHub Username:</label>
 //         <input type="text" id="netlify-github-username" placeholder="your-username" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" ${prefilledValues?.githubUsername ? 'disabled' : ''}>
 //         <small style="color: #666;">${prefilledValues?.githubUsername ? 'Username loaded from environment' : ''}</small>
 //       </div>
-      
+
 //       <div style="margin-bottom: 12px;">
 //         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">Netlify Token:</label>
 //         <input type="password" id="netlify-token" placeholder="netlify_token..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" ${prefilledValues?.netlifyToken ? 'disabled' : ''}>
 //         <small style="color: #666;">${prefilledValues?.netlifyToken ? 'Token loaded from environment' : 'Create at: Netlify User settings → Applications → Personal access tokens'}</small>
 //       </div>
-      
+
 //       <div style="margin-bottom: 16px;">
 //         <label style="display: block; margin-bottom: 4px; font-weight: 600; color: #555;">Site Name:</label>
 //         <input type="text" id="netlify-site-name" placeholder="my-awesome-site" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
 //         <small style="color: #666;">This will be your Netlify URL (sitename.netlify.app) and GitHub repo name</small>
 //       </div>
-      
+
 //       <div style="display: flex; gap: 8px; justify-content: flex-end;">
 //         <button id="netlify-cancel-btn" style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">Cancel</button>
 //         <button id="netlify-deploy-btn" style="padding: 8px 16px; background: #00ad9f; color: white; border: none; border-radius: 4px; cursor: pointer;">Deploy</button>
@@ -918,7 +801,7 @@ export function createDeployButton() {
 //       netlifyTokenInput.value = '••••••••••••••••';
 //       netlifyTokenInput.style.color = '#999';
 //     }
-    
+
 //     // Generate a default site name
 //     siteNameInput.value = `webcontainer-site-${Date.now()}`;
 
@@ -958,13 +841,13 @@ export function createDeployButton() {
 // // Function to create and add Netlify deploy button to the page
 // export function createNetlifyDeployButton() {
 //   if (typeof document === 'undefined') return;
-  
+
 //   // Remove existing button if it exists
 //   const existingButton = document.getElementById('netlify-deploy-btn');
 //   if (existingButton) {
 //     existingButton.remove();
 //   }
-  
+
 //   const button = document.createElement('button');
 //   button.id = 'netlify-deploy-btn';
 //   button.textContent = '🌐 Deploy to Netlify';
@@ -984,39 +867,39 @@ export function createDeployButton() {
 //     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 //     transition: all 0.3s ease;
 //   `;
-  
+
 //   button.onmouseover = () => {
 //     button.style.transform = 'translateY(-2px)';
 //     button.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
 //   };
-  
+
 //   button.onmouseout = () => {
 //     button.style.transform = 'translateY(0)';
 //     button.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
 //   };
-  
+
 //   button.onclick = async () => {
 //     try {
 //       button.textContent = '⏳ Deploying...';
 //       button.disabled = true;
-      
+
 //       const container = await webcontainer;
 //       const result = await deployToNetlify(container);
-      
+
 //       button.textContent = '✅ Deployed!';
-      
+
 //       // Show success message with links
 //               setTimeout(() => {
 //         const netlifyUrl = result.netlify.ssl_url || result.netlify.url;
 //         const message = `Successfully deployed!\n\nGitHub: ${result.github.html_url}\nNetlify: ${netlifyUrl}\n\nNote: Netlify is building your site - it may take 1-2 minutes to be live.\n\nOpen Netlify dashboard?`;
-        
+
 //         if (confirm(message)) {
 //           window.open(`https://app.netlify.com/sites/${result.netlify.name}/deploys`, '_blank');
 //         }
 //         button.textContent = '🌐 Deploy to Netlify';
 //         button.disabled = false;
 //       }, 2000);
-      
+
 //     } catch (error) {
 //       console.error('Netlify deploy failed:', error);
 //       button.textContent = '❌ Failed';
@@ -1027,7 +910,7 @@ export function createDeployButton() {
 //       }, 2000);
 //     }
 //   };
-  
+
 //   document.body.appendChild(button);
 //   return button;
 // }
@@ -1037,8 +920,6 @@ export function createDeployButton() {
 //   const container = await webcontainer;
 //   return deployToNetlify(container, config);
 // }
-
-
 
 ////////////////////////////////////////////////////
 // Add this code to your existing file - it works alongside your current functions
@@ -1053,42 +934,44 @@ interface NetlifyConfig {
 export async function deployToNetlify(container: WebContainer, config?: Partial<NetlifyConfig & GitHubConfig>) {
   try {
     console.log('Starting GitHub + Netlify deployment...');
-    
+
     // Get configuration from environment variables or user input
     const finalConfig = await getNetlifyConfig(config);
+
     if (!finalConfig) {
       throw new Error('Netlify deployment cancelled');
     }
-    
+
     // First, deploy to GitHub (reusing your existing function)
     console.log('Step 1: Deploying to GitHub...');
+
     const githubConfig = {
       token: finalConfig.githubToken,
       username: finalConfig.githubUsername,
-      repoName: finalConfig.siteName // Use site name as repo name for consistency
+      repoName: finalConfig.siteName, // Use site name as repo name for consistency
     };
-    
+
     const repo = await deployToGitHub(container, githubConfig);
     console.log('GitHub deployment successful:', repo.html_url);
-    
+
     // Wait a moment for GitHub to be ready
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
     // Step 2: Create Netlify site (without GitHub connection initially)
     console.log('Step 2: Creating Netlify site...');
-    
+
     const netlifyCreateResponse = await fetch('https://api.netlify.com/api/v1/sites', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${finalConfig.netlifyToken}`,
+        Authorization: `Bearer ${finalConfig.netlifyToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         name: finalConfig.siteName,
         build_settings: {
           cmd: 'npm run build || yarn build || pnpm build || echo "No build command found"',
-          publish: 'dist'
-        }
+          publish: 'dist',
+        },
       }),
     });
 
@@ -1102,31 +985,32 @@ export async function deployToNetlify(container: WebContainer, config?: Partial<
 
     // Step 3: Deploy directly from our extracted files (manual deployment)
     console.log('Step 3: Deploying files directly to Netlify...');
-    
+
     // Extract files again for Netlify deployment
     const fileContents = await extractFiles(container, true);
-    
+
     // Create a form data object for file upload
     const formData = new FormData();
     const zip = new (await import('jszip')).default();
-    
+
     // Add files to zip
     fileContents.forEach((content, path) => {
       const cleanPath = path.replace(`/${WORK_DIR_NAME}/`, '').replace(/^\//, '');
+
       if (cleanPath && cleanPath !== '') {
         zip.file(cleanPath, content);
       }
     });
-    
+
     // Generate zip blob
     const zipBlob = await zip.generateAsync({ type: 'blob' });
     formData.append('file', zipBlob, 'site.zip');
-    
+
     // Deploy to Netlify
     const deployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${netlifyData.id}/deploys`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${finalConfig.netlifyToken}`,
+        Authorization: `Bearer ${finalConfig.netlifyToken}`,
       },
       body: formData,
     });
@@ -1138,15 +1022,15 @@ export async function deployToNetlify(container: WebContainer, config?: Partial<
 
     const deployData = await deployResponse.json();
     console.log('Netlify deployment started:', deployData.id);
-    
+
     // Step 4: Configure GitHub integration for future deployments
     console.log('Step 4: Setting up GitHub integration...');
-    
+
     try {
       const repoUpdateResponse = await fetch(`https://api.netlify.com/api/v1/sites/${netlifyData.id}`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${finalConfig.netlifyToken}`,
+          Authorization: `Bearer ${finalConfig.netlifyToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -1155,18 +1039,18 @@ export async function deployToNetlify(container: WebContainer, config?: Partial<
             repo: `${finalConfig.githubUsername}/${finalConfig.siteName}`,
             branch: 'main',
             dir: '/',
-            cmd: 'npm run build || yarn build || pnpm build || echo "Built successfully"'
+            cmd: 'npm run build || yarn build || pnpm build || echo "Built successfully"',
           },
           build_settings: {
             provider: 'github',
             repo: `${finalConfig.githubUsername}/${finalConfig.siteName}`,
             branch: 'main',
             dir: '/',
-            cmd: 'npm run build || yarn build || pnpm build || echo "Built successfully"'
-          }
+            cmd: 'npm run build || yarn build || pnpm build || echo "Built successfully"',
+          },
         }),
       });
-      
+
       if (repoUpdateResponse.ok) {
         console.log('GitHub integration configured - future pushes will auto-deploy');
       } else {
@@ -1177,11 +1061,11 @@ export async function deployToNetlify(container: WebContainer, config?: Partial<
     }
 
     console.log(`Successfully deployed to GitHub and Netlify!`);
+
     return {
       github: repo,
-      netlify: netlifyData
+      netlify: netlifyData,
     };
-
   } catch (error) {
     console.error('Failed to deploy to Netlify:', error);
     throw error;
@@ -1206,9 +1090,11 @@ async function getNetlifyConfig(providedConfig?: Partial<NetlifyConfig & GitHubC
   console.log('GitHub username exists:', !!envGithubUsername);
 
   // If all required values are available, use them
-  if ((envNetlifyToken || providedConfig?.token) && 
-      (envGithubToken || providedConfig?.githubToken) && 
-      (envGithubUsername || providedConfig?.githubUsername)) {
+  if (
+    (envNetlifyToken || providedConfig?.token) &&
+    (envGithubToken || providedConfig?.githubToken) &&
+    (envGithubUsername || providedConfig?.githubUsername)
+  ) {
     console.log('Using environment variables for Netlify config');
     return {
       netlifyToken: providedConfig?.token || envNetlifyToken!,
@@ -1219,6 +1105,7 @@ async function getNetlifyConfig(providedConfig?: Partial<NetlifyConfig & GitHubC
   }
 
   console.log('Missing required environment variables, showing modal');
+
   // Otherwise, show the modal for missing values
   return showNetlifyConfigModal({
     netlifyToken: envNetlifyToken,
@@ -1314,15 +1201,17 @@ function showNetlifyConfigModal(prefilledValues?: {
       githubTokenInput.value = '••••••••••••••••';
       githubTokenInput.style.color = '#999';
     }
+
     if (prefilledValues?.githubUsername) {
       githubUsernameInput.value = prefilledValues.githubUsername;
       githubUsernameInput.style.color = '#999';
     }
+
     if (prefilledValues?.netlifyToken) {
       netlifyTokenInput.value = '••••••••••••••••';
       netlifyTokenInput.style.color = '#999';
     }
-    
+
     // Generate a default site name
     siteNameInput.value = `webcontainer-site-${Date.now()}`;
 
@@ -1359,83 +1248,6 @@ function showNetlifyConfigModal(prefilledValues?: {
   });
 }
 
-// Function to create and add Netlify deploy button to the page
-export function createNetlifyDeployButton() {
-  if (typeof document === 'undefined') return;
-  
-  // Remove existing button if it exists
-  const existingButton = document.getElementById('netlify-deploy-btn');
-  if (existingButton) {
-    existingButton.remove();
-  }
-  
-  const button = document.createElement('button');
-  button.id = 'netlify-deploy-btn';
-  button.textContent = '🌐 Deploy to Netlify';
-  button.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 340px;
-    z-index: 9999;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, #00ad9f 0%, #00c7b7 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-  `;
-  
-  button.onmouseover = () => {
-    button.style.transform = 'translateY(-2px)';
-    button.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
-  };
-  
-  button.onmouseout = () => {
-    button.style.transform = 'translateY(0)';
-    button.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
-  };
-  
-  button.onclick = async () => {
-    try {
-      button.textContent = '⏳ Deploying...';
-      button.disabled = true;
-      
-      const container = await webcontainer;
-      const result = await deployToNetlify(container);
-      
-      button.textContent = '✅ Deployed!';
-      
-      // Show success message with links
-              setTimeout(() => {
-        const netlifyUrl = result.netlify.ssl_url || result.netlify.url;
-        const message = `Successfully deployed!\n\nGitHub: ${result.github.html_url}\nNetlify: ${netlifyUrl}\n\nYour site is now live! GitHub integration is set up for future deployments.\n\nOpen live site?`;
-        
-        if (confirm(message)) {
-          window.open(netlifyUrl, '_blank');
-        }
-        button.textContent = '🌐 Deploy to Netlify';
-        button.disabled = false;
-      }, 3000);
-      
-    } catch (error) {
-      console.error('Netlify deploy failed:', error);
-      button.textContent = '❌ Failed';
-      alert(`Deployment failed: ${error.message}`);
-      setTimeout(() => {
-        button.textContent = '🌐 Deploy to Netlify';
-        button.disabled = false;
-      }, 2000);
-    }
-  };
-  
-  document.body.appendChild(button);
-  return button;
-}
-
 // Utility function to manually trigger Netlify deployment
 export async function deployProjectToNetlify(config: NetlifyConfig & GitHubConfig) {
   const container = await webcontainer;
@@ -1454,14 +1266,7 @@ if (!import.meta.env.SSR) {
       })
       .then((webcontainer) => {
         webcontainerContext.loaded = true;
-        
-        // Create both buttons once WebContainer is ready
-        setTimeout(() => {
-          createDeployButton();
-          createGitHubDeployButton();
-          createNetlifyDeployButton();
-        }, 1000);
-        
+
         return webcontainer;
       });
 
@@ -1481,7 +1286,6 @@ export async function deployProjectToGitHub(config: GitHubConfig) {
   const container = await webcontainer;
   return deployToGitHub(container, config);
 }
-
 
 // Function to scan and modify files in WebContainer based on criteria
 export async function scanAndModifyFiles(

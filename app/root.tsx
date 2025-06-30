@@ -4,8 +4,10 @@ import { Links, Meta, Outlet, Scripts, ScrollRestoration } from '@remix-run/reac
 import tailwindReset from '@unocss/reset/tailwind-compat.css?url';
 import { themeStore } from './lib/stores/theme';
 import { stripIndents } from './utils/stripIndent';
+import tailwindStyles from './styles/tailwind.css?url';
 import { createHead } from 'remix-island';
 import { useEffect } from 'react';
+import { ToastContainer } from 'react-toastify';
 
 import reactToastifyStyles from 'react-toastify/dist/ReactToastify.css?url';
 import globalStyles from './styles/index.scss?url';
@@ -20,9 +22,10 @@ export const links: LinksFunction = () => [
     type: 'image/svg+xml',
   },
   { rel: 'stylesheet', href: reactToastifyStyles },
-  { rel: 'stylesheet', href: tailwindReset },
+  { rel: 'stylesheet', href: tailwindStyles },
   { rel: 'stylesheet', href: globalStyles },
   { rel: 'stylesheet', href: xtermStyles },
+  { rel: 'stylesheet', href: tailwindReset },
   {
     rel: 'preconnect',
     href: 'https://fonts.googleapis.com',
@@ -72,6 +75,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+      <ToastContainer
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={theme === 'dark' ? 'dark' : 'light'}
+      />
       <ScrollRestoration />
       <Scripts />
     </>
