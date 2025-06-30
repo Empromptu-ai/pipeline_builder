@@ -270,10 +270,10 @@ export const CONTINUE_PROMPT = stripIndents`
   Do not repeat any content, including artifact and action tags.
 `;
 
-export function getApiChatbotPrompt() {
+export function getApiChatbotPrompt(description: str) {
   // const description = sessionUid.get();
   // const description = user.analyticsUid;
-  const description = getSessionUid();
+  // const description = getSessionUid();
   console.log('got sessionId in getApiChatbotPrompt:', description);
   return stripIndents`
   You are an AI assistant that helps users solve problems using a powerful data pipeline API system. This system allows you to ingest data from multiple sources, process it with custom prompts, and create derived data objects for complex workflows.
@@ -802,9 +802,9 @@ export function getApiChatbotPrompt() {
 // export const INJECTED_PROMPT_1 = stripIndents`[INJECTED_PROMPT_1]
 // export const INJECTED_PROMPT_1 = (description: string = '') => stripIndents`[INJECTED_PROMPT_1]
 
-export function getInjectedPrompt1() {
+export function getInjectedPrompt1(description: str) {
   // const description = sessionUid.get();
-  const description = getSessionUid();
+  // const description = getSessionUid();
   // const description = user.analyticsUid;
   console.log('got sessionId in getInjectedPrompt1:', description);
   return stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:

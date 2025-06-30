@@ -1,12 +1,17 @@
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { MAX_RESPONSE_SEGMENTS, MAX_TOKENS } from '~/lib/.server/llm/constants';
-import { CONTINUE_PROMPT, API_CHATBOT_PROMPT,  INJECTED_PROMPT_1 , INJECTED_PROMPT_2, getApiChatbotPrompt , getInjectedPrompt1} from '~/lib/.server/llm/prompts';
+// import { CONTINUE_PROMPT, API_CHATBOT_PROMPT,  INJECTED_PROMPT_1 , INJECTED_PROMPT_2, getApiChatbotPrompt , getInjectedPrompt1} from '~/lib/.server/llm/prompts';
+import { CONTINUE_PROMPT, INJECTED_PROMPT_2, getApiChatbotPrompt , getInjectedPrompt1} from '~/lib/.server/llm/prompts';
 import { streamText, type Messages, type StreamingOptions } from '~/lib/.server/llm/stream-text';
 import SwitchableStream from '~/lib/.server/llm/switchable-stream';
 import { streamText as _streamText, convertToCoreMessages } from 'ai';
 import { getAPIKey } from '~/lib/.server/llm/api-key';
 import { getAnthropicModel } from '~/lib/.server/llm/model';
 // import { generateSessionId } from '~/utils/sessionId';
+
+import { useLoaderData} from '@remix-run/react';
+const { id: mixedId, user } = useLoaderData<{ id?: string; user?: any }>();
+const description = user.sessionUid;
 
 const estimateTokens = (text: string): number => {
   // Rough estimation: ~4 characters per token for English text
@@ -239,7 +244,7 @@ function streamTextWithYourAgent(messages: Messages, env: Env, options?: Streami
 
 function getYourAgentSystemPrompt(): string {
   //return API_CHATBOT_PROMPT; //(sessionId);
-  return getApiChatbotPrompt(); // should include current sessionId
+  return getApiChatbotPrompt(description); // should include current sessionId
 }
 
 function checkIfAlreadyTransitioned(messages: Messages): boolean {
@@ -276,7 +281,7 @@ function injectSinglePrompt(messages: Messages, promptNumber: 1 | 2): Messages {
     injectedMessages.push({ 
       role: 'user' as const, 
       // content:  INJECTED_PROMPT_1 //'[INJECTED_PROMPT_1] Please review the API spec and be absolutely sure that you are calling those functions with the appropriate data formats, for example ensuring that you are sending object_name values, encapsulating input correctly in json, and using the exact function endpoints as they were defined.' 
-      content:  getInjectedPrompt1() // INJECTED_PROMPT_1   // (sessionId) //
+      content:  getInjectedPrompt1(description) // INJECTED_PROMPT_1   // (sessionId) //
     });
   } else {
     injectedMessages.push({ 
