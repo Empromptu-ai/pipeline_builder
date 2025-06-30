@@ -3,6 +3,9 @@ import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
 
 
+import { useLoaderData, useNavigate } from '@remix-run/react';
+const { id: mixedId, user } = useLoaderData<{ id?: string; user?: any }>();
+
 // cannot do this - this is the "client-side" version and so will not work here because of how limited react remix is.
 // import { sessionUid } from '~/lib/stores/session';
 // const description = sessionUid.get();
@@ -269,7 +272,8 @@ export const CONTINUE_PROMPT = stripIndents`
 
 export function getApiChatbotPrompt() {
   // const description = sessionUid.get();
-  const description = getSessionUid();
+  const description = user.analyticsUid;
+  // const description = getSessionUid();
   console.log('got sessionId in getApiChatbotPrompt:', description);
   return stripIndents`
   You are an AI assistant that helps users solve problems using a powerful data pipeline API system. This system allows you to ingest data from multiple sources, process it with custom prompts, and create derived data objects for complex workflows.
@@ -800,7 +804,8 @@ export function getApiChatbotPrompt() {
 
 export function getInjectedPrompt1() {
   // const description = sessionUid.get();
-  const description = getSessionUid();
+  // const description = getSessionUid();
+  const description = user.analyticsUid;
   console.log('got sessionId in getInjectedPrompt1:', description);
   return stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:
 
