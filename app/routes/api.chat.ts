@@ -99,7 +99,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
     if (sessionMatch) {
       try {
         const sessionData = JSON.parse(atob(decodeURIComponent(sessionMatch[1])));
-        description = sessionData.userSession?.userId;
+        const description = sessionData.userSession?.userId;
       } catch (error) {
         console.error('Error decoding session:', error);
       }
