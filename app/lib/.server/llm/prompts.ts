@@ -22,7 +22,7 @@ import { getSessionUid } from '~/utils/session-store';
 // Apparently we can'tdo this:
 // export const getCurrentURL = () => window.location.href;
 
-// Apparently we can't do this wither, so.....at least remember to add the username/ID later when we have it.
+// Apparently we can't do this either, so.....at least remember to add the username/ID later when we have it.
 // import { description } from '~/lib/persistence/useChatHistory'; // Description of the webcontainer, including project name
 // For now, the user/session info will be the following:
 // a random UID/hex bytes (should be distinct by session, just to avoid collision)
