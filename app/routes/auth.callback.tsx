@@ -157,6 +157,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
 
     console.log('userId about to become session:', user.id);
+    //session uid:
+    const session_uid = Math.random().toString(36).substring(2) + Date.now().toString(36);
     // Create user session
     const userSession = {
       userId: user.id,
@@ -168,6 +170,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       analyticsUid: analyticsData.uid,
       analyticsApiKey: analyticsData.apiKey,
       analyticsUsername: analyticsData.username,
+      sessionUid: session_uid,
       //analyticsPassword: analyticsData.password
     };
 
