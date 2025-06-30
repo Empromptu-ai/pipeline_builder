@@ -1348,21 +1348,21 @@ async def input_data(request: InputDataRequest, user_token: str = Depends(get_us
 @app.post("/apply_prompt")
 async def apply_prompt(
     request: ApplyPromptRequest,
-    user_token: str = Depends(get_user_token)
+    session_uid: str = Depends(get_user_token)
 ):
     print(f"[DEBUG] Starting apply_prompt function")
     print(f"[DEBUG] Request: {request}")
-    print(f"[DEBUG] User token: {user_token}")
+    print(f"[DEBUG] User token: {session_uid}")
     
     try:
         print(f"[DEBUG] Entering try block")
         
-        # First, look for a record with same project_id, user_token, and prompt_string
+        # First, look for a record with same project_id, session_uid, and prompt_string
         print(f"[DEBUG] Looking for exact match in prompt_collection")
-        print(f"[DEBUG] Search criteria: user_token={user_token}, prompt_string={request.prompt_string}")
+        print(f"[DEBUG] Search criteria: session_uid={session_uid}, prompt_string={request.prompt_string}")
         
         exact_match = await prompt_collection.find_one({
-            "user_token": user_token,
+            "session_uid": session_uid,
             "prompt_string": request.prompt_string
         })
         
@@ -1394,20 +1394,20 @@ async def apply_prompt(
         else:
             print(f"[DEBUG] No exact match found - looking for project match")
             
-            # No exact match - look for any record with same project_id and user_token
-            print(f"[DEBUG] Searching for any record with user_token: {user_token}")
+            # No exact match - look for any record with same project_id and session_uid
+            print(f"[DEBUG] Searching for any record with session_uid: {session_uid}")
             
             project_match = await prompt_collection.find_one({
-                "user_token": user_token
+                "session_uid": session_uid
             })
             
             print(f"[DEBUG] Project match result: {project_match}")
             
             if not project_match:
-                print(f"[DEBUG] ERROR: No project found for user_token")
+                print(f"[DEBUG] ERROR: No project found for session_uid")
                 raise HTTPException(
                     status_code=404,
-                    detail="No project found for this user_token"
+                    detail="No project found for this session_uid"
                 )
             
             print(f"[DEBUG] Found project match - generating new task")
