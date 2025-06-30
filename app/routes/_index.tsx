@@ -28,10 +28,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   // Generate the session UID here (for app disambiguation)
   const sessionUid = Math.random().toString(36).substring(2) + Date.now().toString(36);
+
+  setSessionUid(sessionUid); // Set it globally (or as globally as a trashfire like remix can manage, this is server-side)
   
   return json({
     user: userSession,
-    sessionUid
+    sessionUid // This is for sending the same value to the client side, since remix cannot do both at the same time.
     // userSecrets: {
     //  apiKey,
     //  customSetting,

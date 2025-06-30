@@ -1,13 +1,20 @@
 import { MODIFICATIONS_TAG_NAME, WORK_DIR } from '~/utils/constants';
 import { allowedHTMLElements } from '~/utils/markdown';
 import { stripIndents } from '~/utils/stripIndent';
-// import { randomBytes } from 'crypto';
-// import { atom } from 'nanostores';
 
-import { sessionUid } from '~/lib/stores/session';
-const description = sessionUid.get();
+
+// cannot do this - this is the "client-side" version and so will not work here because of how limited react remix is.
+// import { sessionUid } from '~/lib/stores/session';
+// const description = sessionUid.get();
 // console.log('got sessionId at the top of prompts declaration file:', description);
 
+
+import { getSessionUid } from '~/utils/session-store';
+
+//export function someOtherFunction() {
+//  const sessionUid = getSessionUid();
+//  // Use it however you need
+//}
 
 
 // export const sessionUid = atom<string | undefined>(undefined);
@@ -261,7 +268,8 @@ export const CONTINUE_PROMPT = stripIndents`
 `;
 
 export function getApiChatbotPrompt() {
-  const description = sessionUid.get();
+  // const description = sessionUid.get();
+  const description = getSessionUid();
   console.log('got sessionId in getApiChatbotPrompt:', description);
   return stripIndents`
   You are an AI assistant that helps users solve problems using a powerful data pipeline API system. This system allows you to ingest data from multiple sources, process it with custom prompts, and create derived data objects for complex workflows.
@@ -791,7 +799,8 @@ export function getApiChatbotPrompt() {
 // export const INJECTED_PROMPT_1 = (description: string = '') => stripIndents`[INJECTED_PROMPT_1]
 
 export function getInjectedPrompt1() {
-  const description = sessionUid.get();
+  // const description = sessionUid.get();
+  const description = getSessionUid();
   console.log('got sessionId in getInjectedPrompt1:', description);
   return stripIndents`[INJECTED_PROMPT_1] Change the style of the app using the set of instructions below that are most relevant to the user task:
 
